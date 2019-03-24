@@ -1,41 +1,46 @@
 #pragma once
 
+#include <Magick++.h>
 #include <cstdio>
 #include <exception>
+#include <filesystem>
 #include <string>
 #include <vector>
-
-#include <png.h>
 
 class DMI {
 public:
     class State {
     public:
-        State(std::string name, unsigned width, unsigned height);
+        State(std::string name);
 
-        void load(uint8_t **rows, unsigned sw, unsigned &index);
+        void load(Magick::Image dmi, unsigned width, unsigned height,
+                  unsigned &index);
+        void split(std::string format, std::filesystem::path path);
 
         std::string name;
         unsigned dirs = 1;
         unsigned frames = 1;
         std::vector<unsigned> delays;
 
-        unsigned width, height;
-
     protected:
-        std::vector<std::vector<std::vector<uint8_t>>> pixels;
+        static const char *dirname(unsigned d);
+
+        void write_frames(unsigned dir, std::string format,
+                          std::filesystem::path path);
+
+        std::vector<std::vector<Magick::Image>> images;
     };
 
-    void load(FILE *fp);
+    void load(std::filesystem::path fname);
+    void split(std::string format, std::filesystem::path path);
 
 protected:
-    void load_states(png_structp png, png_infop info);
+    void load_states(std::string data);
 
+    std::string name;
     float version;
     unsigned width, height;
     std::vector<State> states;
-
-    unsigned sheetw, sheeth;
 };
 
 class DMIError : public std::exception {
@@ -46,12 +51,10 @@ public:
 class ParseError : public DMIError {
 public:
     ParseError(const char *reason);
-    ParseError(FILE *fp, const char *reason);
 
     std::string describe() override;
 
 protected:
-    unsigned pos;
     const char *reason;
 };
 

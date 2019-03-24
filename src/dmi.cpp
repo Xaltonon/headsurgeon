@@ -1,51 +1,26 @@
 #include "dmi.h"
 
+#include <Magick++.h>
 #include <algorithm>
 #include <cstdint>
+#include <filesystem>
 #include <iostream>
 #include <sstream>
-#include <Magick++.h>
 
-void DMI::load(FILE *fp) {
-    uint8_t header[8];
-    if (fread(header, 1, 8, fp) != 8)
-        throw ParseError{fp, "no PNG header"};
+namespace fs = std::filesystem;
 
-    if (png_sig_cmp(header, 0, 8))
-        throw ParseError{fp, "invalid PNG header"};
+void DMI::load(fs::path fname) {
+    name = fname.stem();
+    Magick::Image dmi{fname};
+    std::string data = dmi.attribute("Description");
+    load_states(data);
 
-    png_structp png;
-    png = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr,
-                                 nullptr);
-    if (!png)
-        throw ParseError{fp, "couldn't create PNG read struct"};
-
-    png_infop info;
-    info = png_create_info_struct(png);
-    if (!info) {
-        png_destroy_read_struct(&png, nullptr, nullptr);
-        throw ParseError{fp, "couldn't create PNG info struct"};
+    unsigned index = 0;
+    for (auto &s : states) {
+        s.load(dmi, width, height, index);
     }
 
-    if (setjmp(png_jmpbuf(png))) {
-        png_destroy_read_struct(&png, &info, nullptr);
-        throw ParseError{fp, "internal libpng error"};
-    }
-
-    png_init_io(png, fp);
-    png_set_sig_bytes(png, 8);
-
-    png_read_png(png, info, PNG_TRANSFORM_IDENTITY, nullptr);
-
-    if (png_get_channels(png, info) != 4)
-        throw ParseError{fp, "expected 4 channel PNG"};
-
-    sheetw = png_get_image_width(png, info);
-    sheeth = png_get_image_height(png, info);
-
-    load_states(png, info);
-
-    png_destroy_read_struct(&png, &info, nullptr);
+    split("gif", "out");
 }
 
 static std::string getline(std::istream &input, char delim) {
@@ -54,15 +29,8 @@ static std::string getline(std::istream &input, char delim) {
     return s;
 }
 
-void DMI::load_states(png_structp png, png_infop info) {
-    int num;
-    png_textp text;
-    png_get_text(png, info, &text, &num);
-
-    if (num != 1)
-        throw ParseError{"too many PNG text blocks"};
-
-    std::istringstream dmi_str{text[0].text};
+void DMI::load_states(std::string data) {
+    std::istringstream dmi_str{data};
     if (getline(dmi_str, '\n') != "# BEGIN DMI")
         throw ParseError{"no DMI metadata"};
 
@@ -83,9 +51,8 @@ void DMI::load_states(png_structp png, png_infop info) {
         std::string name = getline(dmi_str, '"');
         if (name == "")
             name = "default";
-        states.emplace_back(name, width, height);
+        states.emplace_back(name);
         DMI::State &cur = states[states.size() - 1];
-        std::cout << "state " << name << "\n";
 
         while (isspace(dmi_str.peek())) {
             while (isspace(dmi_str.peek()))
@@ -110,44 +77,80 @@ void DMI::load_states(png_structp png, png_infop info) {
             getline(dmi_str, '\n');
         }
     }
-
-    uint8_t **rows;
-    rows = png_get_rows(png, info);
-    unsigned index = 0;
-    for (auto &s : states)
-        s.load(rows, sheetw, index);
 }
 
-DMI::State::State(std::string name, unsigned width, unsigned height)
-    : name(name), width(width), height(height) {}
+DMI::State::State(std::string name) : name(name) {}
 
-void DMI::State::load(uint8_t **rows, unsigned int sw, unsigned &index) {
-    for (unsigned i = 0; i < dirs; i++) {
-        pixels.emplace_back();
-        for (unsigned j = 0; j < frames; j++) {
-            pixels[i].emplace_back();
-            pixels[i][j].resize(width * height * 4);
-            unsigned x = (width * index) % sw;
-            unsigned y = (width * index) / sw;
-            for (unsigned k = 0; k < height; k++)
-                std::copy_n(rows[y] + x, width,
-                            pixels[i][j].begin() + k * width);
+void DMI::State::load(Magick::Image dmi, unsigned width, unsigned height,
+                      unsigned &index) {
+    images.resize(dirs);
+    for (unsigned f = 0; f < frames; f++) {
+        for (unsigned d = 0; d < dirs; d++) {
+            auto &frame = images[d].emplace_back(dmi);
+            unsigned x = (index * width) % dmi.size().width();
+            unsigned y = (index / (dmi.size().width() / width)) * height;
+            frame.crop({width, height, x, y});
+            frame.repage();
+            frame.gifDisposeMethod(Magick::BackgroundDispose);
             index++;
         }
     }
 }
 
-ParseError::ParseError(const char *reason) : pos(0), reason(reason) {}
+void DMI::split(std::string format, fs::path path) {
+    fs::create_directory(path);
+    for (auto &s : states) {
+        std::cout << s.name << "\n";
+        s.split(format, path / s.name);
+    }
+}
 
-ParseError::ParseError(FILE *fp, const char *reason)
-    : pos(ftell(fp)), reason(reason) {}
+const char *DMI::State::dirname(unsigned d) {
+    switch (d) {
+    case 0:
+        return "down";
+    case 1:
+        return "up";
+    case 2:
+        return "right";
+    case 3:
+        return "left";
+    case 4:
+        return "downright";
+    case 5:
+        return "downleft";
+    case 6:
+        return "upright";
+    case 7:
+        return "upleft";
+    default:
+        throw ParseError("unknown direction");
+    }
+}
+
+void DMI::State::split(std::string format, fs::path path) {
+    if (dirs == 1) {
+        write_frames(0, format, path);
+        return;
+    }
+
+    fs::create_directory(path);
+    for (unsigned d = 0; d < dirs; d++) {
+        write_frames(d, format, path / dirname(d));
+    }
+}
+
+void DMI::State::write_frames(unsigned int dir, std::string format,
+                              std::filesystem::path path) {
+    Magick::writeImages(images[dir].begin(), images[dir].end(),
+                        path.string() + "." + format);
+}
+
+ParseError::ParseError(const char *reason) : reason(reason) {}
 
 std::string ParseError::describe() {
     std::stringstream s;
-    if (pos)
-        s << "Error parsing DMI (" << reason << ") at position " << pos;
-    else
-        s << "Error parsing DMI (" << reason << ")";
+    s << "Error parsing DMI (" << reason << ")";
     return s.str();
 }
 
