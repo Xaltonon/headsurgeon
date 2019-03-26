@@ -73,6 +73,7 @@ void DMI::load_states(std::string data) {
                 } while (dmi_str.peek() == ',' && dmi_str.get());
             } else if (property == "loop") {
                 dmi_str >> cur.loop;
+            } else if (property == "rewind") {
             } else {
                 throw ParseError{"unknown DMI property encountered"};
             }
