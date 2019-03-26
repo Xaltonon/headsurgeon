@@ -1,26 +1,28 @@
 #include "dmi.h"
 
-#include <Magick++.h>
 #include <algorithm>
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
 #include <sstream>
 
+#include "codecs/png.h"
+#include "codecs/webp.h"
+
 namespace fs = std::filesystem;
 
 void DMI::load(fs::path fname) {
     name = fname.stem();
-    Magick::Image dmi{fname};
-    std::string data = dmi.attribute("Description");
+    PNG png;
+    png.load(fname);
+
+    std::string data = png.text;
     load_states(data);
 
     unsigned index = 0;
     for (auto &s : states) {
-        s.load(dmi, width, height, index);
+        s.load(png, width, height, index);
     }
-
-    split("gif", "out");
 }
 
 static std::string getline(std::istream &input, char delim) {
@@ -70,6 +72,7 @@ void DMI::load_states(std::string data) {
                     dmi_str >> cur.delays.emplace_back();
                 } while (dmi_str.peek() == ',' && dmi_str.get());
             } else if (property == "loop") {
+                dmi_str >> cur.loop;
             } else {
                 throw ParseError{"unknown DMI property encountered"};
             }
@@ -81,27 +84,27 @@ void DMI::load_states(std::string data) {
 
 DMI::State::State(std::string name) : name(name) {}
 
-void DMI::State::load(Magick::Image dmi, unsigned width, unsigned height,
+void DMI::State::load(PNG &png, unsigned width, unsigned height,
                       unsigned &index) {
     images.resize(dirs);
+    for (unsigned i = 0; i < dirs; i++)
+        images[i].resize(frames);
+
     for (unsigned f = 0; f < frames; f++) {
         for (unsigned d = 0; d < dirs; d++) {
-            auto &frame = images[d].emplace_back(dmi);
-            unsigned x = (index * width) % dmi.size().width();
-            unsigned y = (index / (dmi.size().width() / width)) * height;
-            frame.crop({width, height, x, y});
-            frame.repage();
-            frame.gifDisposeMethod(Magick::BackgroundDispose);
+            unsigned x = (index * width) % png.image_size.x;
+            unsigned y = (index / (png.image_size.x / width)) * height;
+            images[d][f] = png.slice({x, y}, {width, height});
             index++;
         }
     }
 }
 
-void DMI::split(std::string format, fs::path path) {
+void DMI::split(fs::path path) {
     fs::create_directory(path);
     for (auto &s : states) {
         std::cout << s.name << "\n";
-        s.split(format, path / s.name);
+        s.split(path / s.name);
     }
 }
 
@@ -128,22 +131,22 @@ const char *DMI::State::dirname(unsigned d) {
     }
 }
 
-void DMI::State::split(std::string format, fs::path path) {
+void DMI::State::split(fs::path path) {
     if (dirs == 1) {
-        write_frames(0, format, path);
+        write_frames(0, path);
         return;
     }
 
     fs::create_directory(path);
     for (unsigned d = 0; d < dirs; d++) {
-        write_frames(d, format, path / dirname(d));
+        write_frames(d, path / dirname(d));
     }
 }
 
-void DMI::State::write_frames(unsigned int dir, std::string format,
+void DMI::State::write_frames(unsigned int dir,
                               std::filesystem::path path) {
-    Magick::writeImages(images[dir].begin(), images[dir].end(),
-                        path.string() + "." + format);
+    WebP webp{images[dir], delays, loop};
+    webp.save(path.replace_extension("webp"));
 }
 
 ParseError::ParseError(const char *reason) : reason(reason) {}

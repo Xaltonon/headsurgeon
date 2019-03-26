@@ -1,11 +1,13 @@
 #pragma once
 
-#include <Magick++.h>
 #include <cstdio>
 #include <exception>
 #include <filesystem>
 #include <string>
 #include <vector>
+
+#include "codecs/image.h"
+#include "codecs/png.h"
 
 class DMI {
 public:
@@ -13,26 +15,26 @@ public:
     public:
         State(std::string name);
 
-        void load(Magick::Image dmi, unsigned width, unsigned height,
-                  unsigned &index);
-        void split(std::string format, std::filesystem::path path);
+        void load(PNG &png, unsigned width, unsigned height, unsigned &index);
+        void split(std::filesystem::path path);
 
         std::string name;
         unsigned dirs = 1;
         unsigned frames = 1;
-        std::vector<unsigned> delays;
+        unsigned loop = 0;
+        std::vector<float> delays;
 
     protected:
         static const char *dirname(unsigned d);
 
-        void write_frames(unsigned dir, std::string format,
+        void write_frames(unsigned dir,
                           std::filesystem::path path);
 
-        std::vector<std::vector<Magick::Image>> images;
+        std::vector<std::vector<Image>> images;
     };
 
     void load(std::filesystem::path fname);
-    void split(std::string format, std::filesystem::path path);
+    void split(std::filesystem::path path);
 
 protected:
     void load_states(std::string data);
