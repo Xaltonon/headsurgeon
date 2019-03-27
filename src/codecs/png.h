@@ -36,6 +36,9 @@ protected:
     public:
         WriteHandle();
         ~WriteHandle();
+
+        png_structp png;
+        png_infop info;
     };
 
     uint8_t **rows;

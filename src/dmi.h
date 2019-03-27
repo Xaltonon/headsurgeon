@@ -1,13 +1,13 @@
 #pragma once
 
 #include <cstdio>
-#include <exception>
 #include <filesystem>
 #include <string>
 #include <vector>
 
 #include "codecs/image.h"
 #include "codecs/png.h"
+#include "errors.h"
 
 class DMI {
 public:
@@ -43,29 +43,4 @@ protected:
     float version;
     unsigned width, height;
     std::vector<State> states;
-};
-
-class DMIError : public std::exception {
-public:
-    virtual std::string describe() = 0;
-};
-
-class ParseError : public DMIError {
-public:
-    ParseError(const char *reason);
-
-    std::string describe() override;
-
-protected:
-    const char *reason;
-};
-
-class VersionError : public DMIError {
-public:
-    VersionError(float got, float expected);
-
-    std::string describe() override;
-
-protected:
-    float got, expected;
 };

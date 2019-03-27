@@ -21,6 +21,23 @@ PNG::ReadHandle::~ReadHandle() {
     png_destroy_read_struct(&png, &info, nullptr);
 }
 
+PNG::WriteHandle::WriteHandle() {
+    png = png_create_write_struct(
+        PNG_LIBPNG_VER_STRING, nullptr,
+        [](png_structp, const char *) { throw "internal libpng write error"; },
+        nullptr);
+    if (!png)
+        throw "couldn't create libpng write struct";
+
+    info = png_create_info_struct(png);
+    if (!info)
+        throw "couldn't create PNG info struct";
+}
+
+PNG::WriteHandle::~WriteHandle() {
+    png_destroy_write_struct(&png, &info);
+}
+
 PNG::~PNG() {
     if (!rows)
         return;
