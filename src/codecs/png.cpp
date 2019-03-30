@@ -1,20 +1,22 @@
 #include "codecs/png.h"
 #include "codecs/file.h"
+#include "errors.h"
 
+#include <iostream>
 #include <algorithm>
 #include <functional>
 
 PNG::ReadHandle::ReadHandle() {
     png = png_create_read_struct(
         PNG_LIBPNG_VER_STRING, nullptr,
-        [](png_structp, const char *) { throw "internal libpng read error"; },
+        [](png_structp, const char *) { throw ParseError("internal libpng read error"); },
         nullptr);
     if (!png)
-        throw "couldn't create libpng read struct";
+        throw ParseError("couldn't create libpng read struct");
 
     info = png_create_info_struct(png);
     if (!info)
-        throw "couldn't create PNG info struct";
+        throw ParseError("couldn't create PNG info struct");
 }
 
 PNG::ReadHandle::~ReadHandle() {
@@ -24,14 +26,14 @@ PNG::ReadHandle::~ReadHandle() {
 PNG::WriteHandle::WriteHandle() {
     png = png_create_write_struct(
         PNG_LIBPNG_VER_STRING, nullptr,
-        [](png_structp, const char *) { throw "internal libpng write error"; },
+        [](png_structp, const char *) { throw ParseError("internal libpng write error"); },
         nullptr);
     if (!png)
-        throw "couldn't create libpng write struct";
+        throw ParseError("couldn't create libpng write struct");
 
     info = png_create_info_struct(png);
     if (!info)
-        throw "couldn't create PNG info struct";
+        throw ParseError("couldn't create PNG info struct");
 }
 
 PNG::WriteHandle::~WriteHandle() {
@@ -52,7 +54,7 @@ void PNG::load(std::filesystem::path path) {
     uint8_t sig[8];
     fread(sig, 1, 8, file.file);
     if (!png_check_sig(sig, 8))
-        throw "not a PNG file";
+        throw ParseError("not a PNG file");
 
     ReadHandle handle;
 
@@ -60,8 +62,8 @@ void PNG::load(std::filesystem::path path) {
     png_set_sig_bytes(handle.png, 8);
     png_read_info(handle.png, handle.info);
 
-    if (png_get_channels(handle.png, handle.info) != 4)
-        throw "expected 4 channel PNG";
+    png_set_palette_to_rgb(handle.png);
+    png_set_tRNS_to_alpha(handle.png);
 
     image_size = {png_get_image_width(handle.png, handle.info),
                   png_get_image_height(handle.png, handle.info)};
@@ -77,8 +79,8 @@ void PNG::load(std::filesystem::path path) {
     int num;
     png_get_text(handle.png, handle.info, &t, &num);
 
-    if (num != 1)
-        throw "incorrect PNG text blocks";
+    if (num < 1)
+        throw ParseError("incorrect PNG text blocks");
 
     text = std::string(t->text);
 }

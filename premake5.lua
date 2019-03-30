@@ -19,7 +19,7 @@ project "headsurgeon"
   links { "png", "webp", "webpmux", "stdc++fs" }
   includedirs { "src" }
 
-project "headsurgeon-cli"
+project "hsdmi"
   kind "consoleapp"
   language "c++"
   cppdialect "c++17"
@@ -27,4 +27,4 @@ project "headsurgeon-cli"
   files { "cli/*.cpp", "cli/*.h"}
 
   links { "headsurgeon" }
-  includedirs { "src" }
+  includedirs { "src", "cli/CLI11/include" }

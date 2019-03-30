@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cstdint>
 #include <filesystem>
-#include <iostream>
 #include <sstream>
 
 #include "codecs/png.h"
@@ -102,11 +101,15 @@ void DMI::State::load(PNG &png, unsigned width, unsigned height,
     }
 }
 
-void DMI::split(fs::path path) {
+void DMI::split(fs::path path,
+                std::function<void(int, int, std::string)> callback) {
     fs::create_directory(path);
+    int i = 1;
+    int total = states.size();
     for (auto &s : states) {
-        std::cout << s.name << "\n";
+        callback(total, i, s.name);
         s.split(path / s.name);
+        i++;
     }
 }
 

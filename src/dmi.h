@@ -2,8 +2,10 @@
 
 #include <cstdio>
 #include <filesystem>
+#include <functional>
 #include <string>
 #include <vector>
+
 
 #include "codecs/image.h"
 #include "codecs/png.h"
@@ -34,13 +36,14 @@ public:
     };
 
     void load(std::filesystem::path fname);
-    void split(std::filesystem::path path);
-
-protected:
-    void load_states(std::string data);
+    void split(std::filesystem::path path,
+               std::function<void(int total, int i, std::string name)> callback);
 
     std::string name;
     float version;
     unsigned width, height;
     std::vector<State> states;
+
+protected:
+    void load_states(std::string data);
 };
