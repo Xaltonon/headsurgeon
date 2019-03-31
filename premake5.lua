@@ -16,7 +16,7 @@ project "headsurgeon"
 
   files { "src/*.cpp", "src/*.h", "src/codecs/*.cpp", "src/codecs/*.h" }
 
-  links { "png", "webp", "webpmux", "stdc++fs" }
+  links { "png", "webp", "webpmux", "webpdemux", "stdc++fs" }
   includedirs { "src" }
 
 project "hsdmi"

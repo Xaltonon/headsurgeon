@@ -38,6 +38,8 @@ public:
     void load(std::filesystem::path fname);
     void split(std::filesystem::path path,
                std::function<void(int total, int i, std::string name)> callback);
+    void join(std::filesystem::path path,
+              std::function<void(int total, int i, std::string name)> callback);
 
     std::string name;
     float version;

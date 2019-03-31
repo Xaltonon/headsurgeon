@@ -4,6 +4,7 @@
 
 #include <webp/encode.h>
 #include <webp/mux.h>
+#include <webp/demux.h>
 
 #include <cstdio>
 
@@ -15,6 +16,7 @@ void WebP::save(std::filesystem::path path) {
 
     WebPConfig config;
     config.image_hint = WEBP_HINT_GRAPH;
+    config.thread_level = 1;
     WebPConfigInit(&config);
     WebPConfigLosslessPreset(&config, 6);
 
@@ -58,9 +60,32 @@ void WebP::save(std::filesystem::path path) {
     WebPAnimEncoderAssemble(enc, &data);
     WebPAnimEncoderDelete(enc);
 
-    FileHandle file{path.c_str(), "wb"};
+    FileHandle file{path.string().c_str(), "wb"};
     fwrite(data.bytes, 1, data.size, file.file);
 
     WebPPictureFree(&pic);
     WebPDataClear(&data);
+}
+
+void WebP::load(std::filesystem::path path) {
+    size_t size = std::filesystem::file_size(path);
+
+    WebPData data;
+    std::vector<uint8_t> anim_data;
+    anim_data.resize(size);
+
+    FileHandle file{path.string().c_str(), "rb"};
+    fread(anim_data.data(), 1, size, file.file);
+    data.size = size;
+    data.bytes = anim_data.data();
+
+    WebPAnimDecoderOptions opts;
+    WebPAnimDecoderOptionsInit(&opts);
+    opts.use_threads = 1;
+
+    WebPAnimDecoder *dec = WebPAnimDecoderNew(&data, &opts);
+    WebPAnimInfo anim_info;
+    WebPAnimDecoderGetInfo(dec, &anim_info);
+
+    WebPAnimDecoderDelete(dec);
 }

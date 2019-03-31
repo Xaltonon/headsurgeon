@@ -74,6 +74,7 @@ void DMI::load_states(std::string data) {
             } else if (property == "loop") {
                 dmi_str >> cur.loop;
             } else if (property == "rewind") {
+            } else if (property == "hotspot") {
             } else {
                 throw ParseError{"unknown DMI property encountered"};
             }
@@ -152,4 +153,9 @@ void DMI::State::write_frames(unsigned int dir,
                               std::filesystem::path path) {
     WebP webp{images[dir], delays, loop};
     webp.save(path.replace_extension("webp"));
+}
+
+void join(std::filesystem::path path,
+          std::function<void(int total, int i, std::string name)> callback) {
+    
 }

@@ -49,7 +49,7 @@ PNG::~PNG() {
 }
 
 void PNG::load(std::filesystem::path path) {
-    FileHandle file(path.c_str(), "rb");
+    FileHandle file(path.string().c_str(), "rb");
 
     uint8_t sig[8];
     fread(sig, 1, 8, file.file);

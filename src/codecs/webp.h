@@ -11,6 +11,7 @@ public:
     WebP(std::vector<Image> frames, std::vector<float> delays, unsigned loops);
 
     void save(std::filesystem::path path);
+    void load(std::filesystem::path path);
 
 protected:
     std::vector<Image> frames;
