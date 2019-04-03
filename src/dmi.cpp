@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <sstream>
+#include <iostream>
 
 #include "codecs/png.h"
 #include "codecs/webp.h"
@@ -34,18 +35,27 @@ static std::string getline(std::istream &input, char delim) {
 void DMI::load_states(std::string data) {
     std::istringstream dmi_str{data};
     if (getline(dmi_str, '\n') != "# BEGIN DMI")
-        throw ParseError{"no DMI metadata"};
+        throw ReasonError{"no DMI metadata"};
 
     getline(dmi_str, '=');
     dmi_str >> version;
-    getline(dmi_str, '=');
-    dmi_str >> width;
-    getline(dmi_str, '=');
-    dmi_str >> height;
-    getline(dmi_str, '\n');
 
     if (dmi_str.fail())
-        throw ParseError{"bad version/size header"};
+        throw ReasonError{"bad version/size header"};
+
+    auto s = getline(dmi_str,'\n');
+    size_t pos = dmi_str.tellg();
+    if (getline(dmi_str, '=') != "\twidth ") {
+        width = 32;
+        height = 32;
+        dmi_str.seekg(pos);
+    } else {
+        dmi_str >> width;
+        getline(dmi_str, '=');
+        dmi_str >> height;
+        getline(dmi_str, '\n');
+    }
+
     if (version != 4.0)
         throw VersionError(version, 4.0);
 
@@ -75,8 +85,10 @@ void DMI::load_states(std::string data) {
                 dmi_str >> cur.loop;
             } else if (property == "rewind") {
             } else if (property == "hotspot") {
+            } else if (property == "movement") {
             } else {
-                throw ParseError{"unknown DMI property encountered"};
+                std::cerr << " " << property << "\n";
+                throw ReasonError{"unknown DMI property encountered"};
             }
 
             getline(dmi_str, '\n');
@@ -133,7 +145,7 @@ const char *DMI::State::dirname(unsigned d) {
     case 7:
         return "upleft";
     default:
-        throw ParseError("unknown direction");
+        throw ReasonError("unknown direction");
     }
 }
 
@@ -155,7 +167,23 @@ void DMI::State::write_frames(unsigned int dir,
     webp.save(path.replace_extension("webp"));
 }
 
-void join(std::filesystem::path path,
-          std::function<void(int total, int i, std::string name)> callback) {
-    
+void DMI::State::join(std::filesystem::path path) {
+    if (fs::is_directory(path)) {
+    } else {
+        dirs = 1;
+        WebP webp;
+        webp.load(path);
+        images.push_back(webp.frames);
+        delays = webp.delays;
+        frames = images.size();
+        loop = webp.loops;
+    }
+}
+
+void DMI::join(std::filesystem::path path,
+               std::function<void(int total, int i, std::string name)> callback) {
+    for (auto &p : fs::directory_iterator(path)) {
+        auto &state = states.emplace_back(p.path().stem());
+        state.join(p);
+    }
 }

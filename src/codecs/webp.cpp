@@ -67,14 +67,22 @@ void WebP::save(std::filesystem::path path) {
     WebPDataClear(&data);
 }
 
+WebP::DecoderHandle::DecoderHandle(WebPData &data, WebPAnimDecoderOptions &opts)
+    : d(WebPAnimDecoderNew(&data, &opts))
+{}
+
+WebP::DecoderHandle::~DecoderHandle() {
+    WebPAnimDecoderDelete(d);
+}
+
 void WebP::load(std::filesystem::path path) {
+    FileHandle file{path.string().c_str(), "rb"};
     size_t size = std::filesystem::file_size(path);
 
     WebPData data;
     std::vector<uint8_t> anim_data;
     anim_data.resize(size);
 
-    FileHandle file{path.string().c_str(), "rb"};
     fread(anim_data.data(), 1, size, file.file);
     data.size = size;
     data.bytes = anim_data.data();
@@ -83,9 +91,31 @@ void WebP::load(std::filesystem::path path) {
     WebPAnimDecoderOptionsInit(&opts);
     opts.use_threads = 1;
 
-    WebPAnimDecoder *dec = WebPAnimDecoderNew(&data, &opts);
+    DecoderHandle dec{data, opts};
     WebPAnimInfo anim_info;
-    WebPAnimDecoderGetInfo(dec, &anim_info);
+    if (!WebPAnimDecoderGetInfo(dec.d, &anim_info))
+        return;
 
-    WebPAnimDecoderDelete(dec);
+    loops = anim_info.loop_count;
+
+    int prev_time = 0;
+
+    while (WebPAnimDecoderHasMoreFrames(dec.d)) {
+        uint8_t *buf;
+        int timestamp;
+        WebPAnimDecoderGetNext(dec.d, &buf, &timestamp);
+        delays.push_back((timestamp-prev_time) / 100.0);
+        prev_time = timestamp;
+        auto &f = frames.emplace_back();
+        f.pixels.reserve(anim_info.canvas_height * anim_info.canvas_width * 4);
+
+        f.size = {anim_info.canvas_width, anim_info.canvas_height};
+        for (unsigned i = 0;
+             i < anim_info.canvas_height * anim_info.canvas_height; i++) {
+            f.pixels[i*4] = buf[i] >> 16;
+            f.pixels[i*4+1] = buf[i] >> 8;
+            f.pixels[i*4+2] = buf[i];
+            f.pixels[i*4+3] = buf[i] >> 24;
+        }
+    }
 }

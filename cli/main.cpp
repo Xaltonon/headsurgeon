@@ -4,6 +4,7 @@
 #include <CLI/CLI.hpp>
 
 #include "dmi.h"
+#include "codecs/webp.h"
 
 namespace fs = std::filesystem;
 
@@ -42,7 +43,10 @@ int run_slice(std::string input, std::optional<std::string> output, bool force,
                                          << std::setw(32) << name;
                                std::flush(std::cout);
                            });
-        std::cout << std::setw(100) << "\rDone.\n";
+        std::cout << "\r[  DONE ] " << std::setw(32)
+                  << fs::path(input).filename().string();
+        std::flush(std::cout);
+        std::cout << "\n";
     } catch (DMIError &e) {
         std::cerr << "Error splitting DMI: " << e.describe() << "\n";
         return 4;
@@ -66,6 +70,8 @@ int run_ls(std::string input) {
         return 2;
     }
 
+    std::cout << fs::path(input).filename().string() << "\n";
+
     std::cout << std::setw(8) << "width"
               << std::setw(8) << "height"
               << "\n";
@@ -85,6 +91,21 @@ int run_ls(std::string input) {
                   << "\n";
     }
 
+    std::cout << "\n";
+
+    return 0;
+}
+
+int run_join(std::string input) {
+    DMI dmi;
+    try {
+       dmi.join(input, [](int, int,
+                          std::string){});
+    } catch (DMIError &e) {
+        std::cerr << "Error opening WebP: " << e.describe() << "\n";
+        return 1;
+    }
+
     return 0;
 }
 
@@ -96,12 +117,15 @@ int main(int argc, char **argv) {
     CLI::App *ls =
         app.add_subcommand("ls", "List icon states in a DMI");
 
-    std::string input;
+    std::vector<std::string> input;
     std::optional<std::string> output;
     bool recurse, force;
 
-    ls->add_option("INPUT", input, "Input DMI");
-    ls->callback([&]() { ret = run_ls(input); });
+    ls->add_option("INPUT", input, "Input DMI(s)")->required();
+    ls->callback([&]() {
+                     for (auto &s : input)
+                         ret = run_ls(s);
+                 });
 
     CLI::App *slice =
         app.add_subcommand("slice", "Slice a DMI into a directory");
@@ -110,7 +134,16 @@ int main(int argc, char **argv) {
     slice->add_option("-o,--output", output, "Rename the output directory");
     slice->add_flag("-r,--recursive", recurse, "Recurse into directories");
     slice->add_flag("-f,--force", force, "Overwrite existing output");
-    slice->callback([&]() { ret = run_slice(input, output, force, recurse); });
+    slice->callback([&]() {
+                        for (auto &s : input)
+                            ret = run_slice(s, output, force, recurse);
+                    });
+
+    CLI::App *join =
+        app.add_subcommand("join", "Join a directory into a DMI");
+
+    join->add_option("INPUT", input, "Input directory")->required();
+    join->callback([&]() { ret = run_join(input[0]); });
 
     app.require_subcommand();
 

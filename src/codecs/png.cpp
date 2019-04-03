@@ -9,14 +9,14 @@
 PNG::ReadHandle::ReadHandle() {
     png = png_create_read_struct(
         PNG_LIBPNG_VER_STRING, nullptr,
-        [](png_structp, const char *) { throw ParseError("internal libpng read error"); },
+        [](png_structp, const char *) { throw ReasonError("internal libpng read error"); },
         nullptr);
     if (!png)
-        throw ParseError("couldn't create libpng read struct");
+        throw ReasonError("couldn't create libpng read struct");
 
     info = png_create_info_struct(png);
     if (!info)
-        throw ParseError("couldn't create PNG info struct");
+        throw ReasonError("couldn't create PNG info struct");
 }
 
 PNG::ReadHandle::~ReadHandle() {
@@ -26,18 +26,26 @@ PNG::ReadHandle::~ReadHandle() {
 PNG::WriteHandle::WriteHandle() {
     png = png_create_write_struct(
         PNG_LIBPNG_VER_STRING, nullptr,
-        [](png_structp, const char *) { throw ParseError("internal libpng write error"); },
+        [](png_structp, const char *) { throw ReasonError("internal libpng write error"); },
         nullptr);
     if (!png)
-        throw ParseError("couldn't create libpng write struct");
+        throw ReasonError("couldn't create libpng write struct");
 
     info = png_create_info_struct(png);
     if (!info)
-        throw ParseError("couldn't create PNG info struct");
+        throw ReasonError("couldn't create PNG info struct");
 }
 
 PNG::WriteHandle::~WriteHandle() {
     png_destroy_write_struct(&png, &info);
+}
+
+PNG::PNG(Vec size)
+    : image_size(size)
+{
+    rows = new uint8_t*[size.y];
+    for (unsigned i = 0; i < size.y; i++)
+        rows[i] = new uint8_t[size.x*4];
 }
 
 PNG::~PNG() {
@@ -48,13 +56,20 @@ PNG::~PNG() {
     delete[] rows;
 }
 
+static bool dmi_check_sig(uint8_t *sig) {
+    const uint8_t expected[] = {0x04, 0x44, 0x4d, 0x49};
+    return std::equal(sig, sig+4, expected);
+}
+
 void PNG::load(std::filesystem::path path) {
     FileHandle file(path.string().c_str(), "rb");
 
     uint8_t sig[8];
     fread(sig, 1, 8, file.file);
-    if (!png_check_sig(sig, 8))
-        throw ParseError("not a PNG file");
+    if (dmi_check_sig(sig))
+        throw ReasonError("old-style DMIs are not supported");
+    else if (!png_check_sig(sig, 8))
+        throw ReasonError("not a PNG file");
 
     ReadHandle handle;
 
@@ -80,7 +95,7 @@ void PNG::load(std::filesystem::path path) {
     png_get_text(handle.png, handle.info, &t, &num);
 
     if (num < 1)
-        throw ParseError("incorrect PNG text blocks");
+        throw ReasonError("incorrect PNG text blocks");
 
     text = std::string(t->text);
 }
@@ -94,4 +109,11 @@ Image PNG::slice(Vec pos, Vec size) {
                     ret.pixels.begin() + i * size.x * 4);
     }
     return ret;
+}
+
+void PNG::insert(Vec pos, Image img) {
+    for (unsigned i = 0; i < img.size.y; i++) {
+        auto p = img.pixels.begin() + i*4*img.size.x;
+        std::copy_n(p, 4*img.size.x, rows[i + pos.y] + pos.x*4);
+    }
 }

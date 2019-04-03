@@ -11,13 +11,15 @@
 class PNG {
 public:
     PNG() = default;
-    PNG(Image img);
+    PNG(Vec size);
     PNG(const PNG &) = delete;
     PNG &operator=(const PNG &) = delete;
     ~PNG();
 
     void load(std::filesystem::path path);
     Image slice(Vec pos, Vec size);
+
+    void insert(Vec pos, Image img);
 
     Vec image_size;
     std::string text;
@@ -41,5 +43,5 @@ protected:
         png_infop info;
     };
 
-    uint8_t **rows;
+    uint8_t **rows = nullptr;
 };

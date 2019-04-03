@@ -20,6 +20,9 @@ public:
         void load(PNG &png, unsigned width, unsigned height, unsigned &index);
         void split(std::filesystem::path path);
 
+        void save(PNG &png, unsigned &index);
+        void join(std::filesystem::path path);
+
         std::string name;
         unsigned dirs = 1;
         unsigned frames = 1;

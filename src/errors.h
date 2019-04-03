@@ -8,9 +8,9 @@ public:
     virtual std::string describe() = 0;
 };
 
-class ParseError : public DMIError {
+class ReasonError : public DMIError {
 public:
-    ParseError(const char *reason);
+    ReasonError(const char *reason);
 
     std::string describe() override;
 

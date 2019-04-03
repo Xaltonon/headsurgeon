@@ -10,9 +10,9 @@ workspace "headsurgeon"
     flags { "linktimeoptimization" }
 
 project "headsurgeon"
-  kind "sharedlib"
   language "c++"
   cppdialect "c++17"
+  kind "sharedlib"
 
   files { "src/*.cpp", "src/*.h", "src/codecs/*.cpp", "src/codecs/*.h" }
 
@@ -26,5 +26,5 @@ project "hsdmi"
 
   files { "cli/*.cpp", "cli/*.h"}
 
-  links { "headsurgeon" }
+  links { "headsurgeon", "stdc++fs" }
   includedirs { "src", "cli/CLI11/include" }

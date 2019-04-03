@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <vector>
+#include <webp/demux.h>
 
 #include "codecs/image.h"
 
@@ -13,8 +14,15 @@ public:
     void save(std::filesystem::path path);
     void load(std::filesystem::path path);
 
-protected:
     std::vector<Image> frames;
     std::vector<float> delays;
     unsigned loops;
+
+protected:
+    struct DecoderHandle {
+        DecoderHandle(WebPData &data, WebPAnimDecoderOptions &opts);
+        ~DecoderHandle();
+
+        WebPAnimDecoder *d;
+    };
 };

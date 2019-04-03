@@ -2,12 +2,10 @@
 
 #include <sstream>
 
-ParseError::ParseError(const char *reason) : reason(reason) {}
+ReasonError::ReasonError(const char *reason) : reason(reason) {}
 
-std::string ParseError::describe() {
-    std::stringstream s;
-    s << "Error parsing DMI (" << reason << ")";
-    return s.str();
+std::string ReasonError::describe() {
+    return reason;
 }
 
 VersionError::VersionError(float got, float expected)
