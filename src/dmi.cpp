@@ -28,7 +28,11 @@ void DMI::load(fs::path fname) {
 }
 
 void DMI::save(fs::path fname) {
-    unsigned size = std::ceil(std::sqrt(states.size()));
+    unsigned num = 0;
+    for (auto &s : states)
+        num += s.dirs * s.frames;
+
+    unsigned size = std::ceil(std::sqrt(num));
     PNG png{{size * width, size * height}};
 
     unsigned index = 0;
@@ -113,7 +117,7 @@ void DMI::load_states(std::string data) {
 std::string DMI::gen_states() {
     std::ostringstream dmi_str;
 
-    dmi_str << "#BEGIN_DMI\n";
+    dmi_str << "# BEGIN DMI\n";
 
     dmi_str << "version = " << version << "\n";
     dmi_str << "\twidth = " << width << "\n";
@@ -133,10 +137,10 @@ std::string DMI::gen_states() {
             bool first = true;
             for (auto d : s.delays) {
                 if (!first) {
-                    dmi_str << ", ";
-                    first = false;
+                    dmi_str << ",";
                 }
                 dmi_str << d;
+                first = false;
             }
             dmi_str << "\n";
 
@@ -145,7 +149,7 @@ std::string DMI::gen_states() {
         }
     }
 
-    dmi_str << "#END_DMI\n";
+    dmi_str << "# END DMI\n";
 
     return dmi_str.str();
 }
@@ -237,17 +241,51 @@ Vec DMI::State::size() const {
     return images[0][0].size;
 }
 
+int DMI::State::dirnum(const std::string name) {
+    if (name == "down")
+        return 0;
+    else if (name == "up")
+        return 1;
+    else if (name == "right")
+        return 2;
+    else if (name == "left")
+        return 3;
+    else if (name == "downright")
+        return 4;
+    else if (name == "downleft")
+        return 5;
+    else if (name == "upright")
+        return 6;
+    else if (name == "upleft")
+        return 7;
+    else
+        throw ReasonError("unknown direction name");
+}
+
 void DMI::State::join(std::filesystem::path path) {
     if (fs::is_directory(path)) {
+        images.resize(8);
+        unsigned total = 0;
+        for (auto &p : fs::directory_iterator(path)) {
+            WebP webp;
+            webp.load(p.path());
+            images[dirnum(p.path().stem())] = webp.frames;
+            delays = webp.delays;
+            loop = webp.loops;
+            total++;
+        }
+        images.resize(total);
     } else {
         dirs = 1;
         WebP webp;
         webp.load(path);
         images.push_back(webp.frames);
         delays = webp.delays;
-        frames = images.size();
         loop = webp.loops;
     }
+
+    frames = images[0].size();
+    dirs = images.size();
 }
 
 void DMI::join(

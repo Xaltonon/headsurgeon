@@ -32,6 +32,7 @@ public:
 
     protected:
         static const char *dirname(unsigned d);
+        static int dirnum(const std::string name);
 
         void write_frames(unsigned dir, std::filesystem::path path);
 

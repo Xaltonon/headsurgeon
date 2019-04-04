@@ -96,12 +96,31 @@ int run_ls(std::string input) {
     return 0;
 }
 
-int run_join(std::string input) {
+int run_join(std::string input, std::optional<std::string> output, bool force,
+             bool recurse) {
     DMI dmi;
+
+    if (!fs::exists(input)) {
+        std::cerr << "Couldn't open directory " << input << "\n";
+        return 1;
+    }
+
+    fs::path outpath;
+    if (output.has_value())
+        outpath = output.value();
+    else
+        outpath = fs::absolute(input).stem().replace_extension("dmi");
+
+    if (fs::exists(outpath) && !force) {
+        std::cerr << "Cowardly refusing to overwrite existing files (use -f to "
+            "force)\n";
+        return 3;
+    }
+
     try {
        dmi.join(input, [](int, int,
                           std::string){});
-       dmi.save("fuck.dmi");
+       dmi.save(outpath);
     } catch (DMIError &e) {
         std::cerr << "Error opening WebP: " << e.describe() << "\n";
         return 1;
@@ -147,7 +166,10 @@ int main(int argc, char **argv) {
     join->add_option("-o,--output", output, "Rename the output directory");
     join->add_flag("-r,--recursive", recurse, "Recurse into directories");
     join->add_flag("-f,--force", force, "Overwrite existing output");
-    join->callback([&]() { ret = run_join(input[0]); });
+    join->callback([&]() {
+                       for (auto &s : input)
+                           ret = run_join(s, output, force, recurse);
+                   });
 
     app.require_subcommand();
 
