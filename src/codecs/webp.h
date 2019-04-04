@@ -20,7 +20,7 @@ public:
 
 protected:
     struct DecoderHandle {
-        DecoderHandle(WebPData &data, WebPAnimDecoderOptions &opts);
+        DecoderHandle(WebPData *data, WebPAnimDecoderOptions *opts);
         ~DecoderHandle();
 
         WebPAnimDecoder *d;

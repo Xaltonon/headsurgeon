@@ -1,10 +1,11 @@
 #include "dmi.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <filesystem>
-#include <sstream>
 #include <iostream>
+#include <sstream>
 
 #include "codecs/png.h"
 #include "codecs/webp.h"
@@ -26,6 +27,19 @@ void DMI::load(fs::path fname) {
     }
 }
 
+void DMI::save(fs::path fname) {
+    unsigned size = std::ceil(std::sqrt(states.size()));
+    PNG png{{size * width, size * height}};
+
+    unsigned index = 0;
+    for (auto &s : states) {
+        s.save(png, index);
+    }
+
+    png.text = gen_states();
+    png.save(fname);
+}
+
 static std::string getline(std::istream &input, char delim) {
     std::string s;
     std::getline(input, s, delim);
@@ -43,7 +57,7 @@ void DMI::load_states(std::string data) {
     if (dmi_str.fail())
         throw ReasonError{"bad version/size header"};
 
-    auto s = getline(dmi_str,'\n');
+    auto s = getline(dmi_str, '\n');
     size_t pos = dmi_str.tellg();
     if (getline(dmi_str, '=') != "\twidth ") {
         width = 32;
@@ -96,6 +110,46 @@ void DMI::load_states(std::string data) {
     }
 }
 
+std::string DMI::gen_states() {
+    std::ostringstream dmi_str;
+
+    dmi_str << "#BEGIN_DMI\n";
+
+    dmi_str << "version = " << version << "\n";
+    dmi_str << "\twidth = " << width << "\n";
+    dmi_str << "\theight = " << height << "\n";
+
+    for (auto &s : states) {
+        if (s.name == "default")
+            dmi_str << "state = \"\"\n";
+        else
+            dmi_str << "state = \"" << s.name << "\"\n";
+
+        dmi_str << "\tdirs = " << s.dirs << "\n";
+        dmi_str << "\tframes = " << s.frames << "\n";
+
+        if (s.frames > 1) {
+            dmi_str << "\tdelay = ";
+            bool first = true;
+            for (auto d : s.delays) {
+                if (!first) {
+                    dmi_str << ", ";
+                    first = false;
+                }
+                dmi_str << d;
+            }
+            dmi_str << "\n";
+
+            if (s.loop)
+                dmi_str << "\tloop = " << s.loop << "\n";
+        }
+    }
+
+    dmi_str << "#END_DMI\n";
+
+    return dmi_str.str();
+}
+
 DMI::State::State(std::string name) : name(name) {}
 
 void DMI::State::load(PNG &png, unsigned width, unsigned height,
@@ -109,6 +163,19 @@ void DMI::State::load(PNG &png, unsigned width, unsigned height,
             unsigned x = (index * width) % png.image_size.x;
             unsigned y = (index / (png.image_size.x / width)) * height;
             images[d][f] = png.slice({x, y}, {width, height});
+            index++;
+        }
+    }
+}
+
+void DMI::State::save(PNG &png, unsigned &index) {
+    auto size = images[0][0].size;
+
+    for (unsigned f = 0; f < frames; f++) {
+        for (unsigned d = 0; d < dirs; d++) {
+            unsigned x = (index * size.x) % png.image_size.x;
+            unsigned y = (index / (png.image_size.x / size.x)) * size.y;
+            png.insert({x, y}, images[d][f]);
             index++;
         }
     }
@@ -161,10 +228,13 @@ void DMI::State::split(fs::path path) {
     }
 }
 
-void DMI::State::write_frames(unsigned int dir,
-                              std::filesystem::path path) {
+void DMI::State::write_frames(unsigned int dir, std::filesystem::path path) {
     WebP webp{images[dir], delays, loop};
     webp.save(path.replace_extension("webp"));
+}
+
+Vec DMI::State::size() const {
+    return images[0][0].size;
 }
 
 void DMI::State::join(std::filesystem::path path) {
@@ -180,10 +250,14 @@ void DMI::State::join(std::filesystem::path path) {
     }
 }
 
-void DMI::join(std::filesystem::path path,
-               std::function<void(int total, int i, std::string name)> callback) {
+void DMI::join(
+    std::filesystem::path path,
+    std::function<void(int total, int i, std::string name)> callback) {
     for (auto &p : fs::directory_iterator(path)) {
         auto &state = states.emplace_back(p.path().stem());
         state.join(p);
     }
+
+    width = states[0].size().x;
+    height = states[0].size().y;
 }

@@ -19,6 +19,7 @@ public:
     void load(std::filesystem::path path);
     Image slice(Vec pos, Vec size);
 
+    void save(std::filesystem::path path);
     void insert(Vec pos, Image img);
 
     Vec image_size;

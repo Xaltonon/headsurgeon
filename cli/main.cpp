@@ -101,6 +101,7 @@ int run_join(std::string input) {
     try {
        dmi.join(input, [](int, int,
                           std::string){});
+       dmi.save("fuck.dmi");
     } catch (DMIError &e) {
         std::cerr << "Error opening WebP: " << e.describe() << "\n";
         return 1;
@@ -143,6 +144,9 @@ int main(int argc, char **argv) {
         app.add_subcommand("join", "Join a directory into a DMI");
 
     join->add_option("INPUT", input, "Input directory")->required();
+    join->add_option("-o,--output", output, "Rename the output directory");
+    join->add_flag("-r,--recursive", recurse, "Recurse into directories");
+    join->add_flag("-f,--force", force, "Overwrite existing output");
     join->callback([&]() { ret = run_join(input[0]); });
 
     app.require_subcommand();

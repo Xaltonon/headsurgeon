@@ -4,9 +4,7 @@
 
 ReasonError::ReasonError(const char *reason) : reason(reason) {}
 
-std::string ReasonError::describe() {
-    return reason;
-}
+std::string ReasonError::describe() { return reason; }
 
 VersionError::VersionError(float got, float expected)
     : got(got), expected(expected) {}

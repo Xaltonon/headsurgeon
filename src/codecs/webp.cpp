@@ -1,10 +1,11 @@
 #include "codecs/webp.h"
 #include "codecs/file.h"
-#include <iostream>
 
+#include <algorithm>
+
+#include <webp/demux.h>
 #include <webp/encode.h>
 #include <webp/mux.h>
-#include <webp/demux.h>
 
 #include <cstdio>
 
@@ -67,9 +68,8 @@ void WebP::save(std::filesystem::path path) {
     WebPDataClear(&data);
 }
 
-WebP::DecoderHandle::DecoderHandle(WebPData &data, WebPAnimDecoderOptions &opts)
-    : d(WebPAnimDecoderNew(&data, &opts))
-{}
+WebP::DecoderHandle::DecoderHandle(WebPData *data, WebPAnimDecoderOptions *opts)
+    : d(WebPAnimDecoderNew(data, opts)) {}
 
 WebP::DecoderHandle::~DecoderHandle() {
     WebPAnimDecoderDelete(d);
@@ -80,6 +80,7 @@ void WebP::load(std::filesystem::path path) {
     size_t size = std::filesystem::file_size(path);
 
     WebPData data;
+    WebPDataInit(&data);
     std::vector<uint8_t> anim_data;
     anim_data.resize(size);
 
@@ -89,9 +90,9 @@ void WebP::load(std::filesystem::path path) {
 
     WebPAnimDecoderOptions opts;
     WebPAnimDecoderOptionsInit(&opts);
-    opts.use_threads = 1;
+    opts.color_mode = MODE_RGBA;
 
-    DecoderHandle dec{data, opts};
+    DecoderHandle dec{&data, &opts};
     WebPAnimInfo anim_info;
     if (!WebPAnimDecoderGetInfo(dec.d, &anim_info))
         return;
@@ -104,18 +105,12 @@ void WebP::load(std::filesystem::path path) {
         uint8_t *buf;
         int timestamp;
         WebPAnimDecoderGetNext(dec.d, &buf, &timestamp);
-        delays.push_back((timestamp-prev_time) / 100.0);
+        delays.push_back((timestamp - prev_time) / 100.0);
         prev_time = timestamp;
         auto &f = frames.emplace_back();
-        f.pixels.reserve(anim_info.canvas_height * anim_info.canvas_width * 4);
+        f.pixels.resize(anim_info.canvas_height * anim_info.canvas_width * 4);
 
         f.size = {anim_info.canvas_width, anim_info.canvas_height};
-        for (unsigned i = 0;
-             i < anim_info.canvas_height * anim_info.canvas_height; i++) {
-            f.pixels[i*4] = buf[i] >> 16;
-            f.pixels[i*4+1] = buf[i] >> 8;
-            f.pixels[i*4+2] = buf[i];
-            f.pixels[i*4+3] = buf[i] >> 24;
-        }
+        std::copy_n(buf, anim_info.canvas_width*anim_info.canvas_height*4, f.pixels.begin());
     }
 }

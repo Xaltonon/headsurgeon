@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 
-
 #include "codecs/image.h"
 #include "codecs/png.h"
 #include "errors.h"
@@ -29,26 +28,31 @@ public:
         unsigned loop = 0;
         std::vector<float> delays;
 
+        Vec size() const;
+
     protected:
         static const char *dirname(unsigned d);
 
-        void write_frames(unsigned dir,
-                          std::filesystem::path path);
+        void write_frames(unsigned dir, std::filesystem::path path);
 
         std::vector<std::vector<Image>> images;
     };
 
     void load(std::filesystem::path fname);
-    void split(std::filesystem::path path,
-               std::function<void(int total, int i, std::string name)> callback);
+    void
+    split(std::filesystem::path path,
+          std::function<void(int total, int i, std::string name)> callback);
+
+    void save(std::filesystem::path fname);
     void join(std::filesystem::path path,
               std::function<void(int total, int i, std::string name)> callback);
 
     std::string name;
-    float version;
+    float version = 4.0;
     unsigned width, height;
     std::vector<State> states;
 
 protected:
     void load_states(std::string data);
+    std::string gen_states();
 };
