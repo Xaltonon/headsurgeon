@@ -1,6 +1,9 @@
 workspace "headsurgeon"
   configurations { "debug", "release" }
 
+  filter "toolset:gcc or toolset:clang"
+    buildoptions {"-Wall"}
+
   filter "configurations:debug"
     defines { "DEBUG" }
     symbols "on"

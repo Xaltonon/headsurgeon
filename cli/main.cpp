@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <iostream>
+#include <regex>
 
 #include <CLI/CLI.hpp>
 
@@ -8,8 +9,14 @@
 
 namespace fs = std::filesystem;
 
-int run_slice(std::string input, std::optional<std::string> output, bool force,
-              bool recurse) {
+void update_status(int total, int i, std::string name) {
+    std::cout << "\r[" << std::setw(3) << i << "/"
+              << std::setw(3) << total << "] "
+              << std::setw(32) << name;
+    std::flush(std::cout);
+}
+
+int run_slice(std::string input, std::optional<std::string> output, bool force) {
     DMI dmi;
 
     if (!fs::exists(input)) {
@@ -37,12 +44,7 @@ int run_slice(std::string input, std::optional<std::string> output, bool force,
     }
 
     try {
-        dmi.split(outpath, [](int total, int i, std::string name){
-                               std::cout << "\r[" << std::setw(3) << i << "/"
-                                         << std::setw(3) << total << "] "
-                                         << std::setw(32) << name;
-                               std::flush(std::cout);
-                           });
+        dmi.split(outpath, update_status);
         std::cout << "\r[  DONE ] " << std::setw(32)
                   << fs::path(input).filename().string();
         std::flush(std::cout);
@@ -96,11 +98,10 @@ int run_ls(std::string input) {
     return 0;
 }
 
-int run_join(std::string input, std::optional<std::string> output, bool force,
-             bool recurse) {
+int run_join(std::string input, std::optional<std::string> output, bool force) {
     DMI dmi;
 
-    if (!fs::exists(input)) {
+    if (!fs::exists(input) || !fs::is_directory(input)) {
         std::cerr << "Couldn't open directory " << input << "\n";
         return 1;
     }
@@ -109,7 +110,7 @@ int run_join(std::string input, std::optional<std::string> output, bool force,
     if (output.has_value())
         outpath = output.value();
     else
-        outpath = fs::absolute(input).stem().replace_extension("dmi");
+        outpath = (fs::path(input) / "").parent_path().stem().replace_extension("dmi");
 
     if (fs::exists(outpath) && !force) {
         std::cerr << "Cowardly refusing to overwrite existing files (use -f to "
@@ -118,12 +119,45 @@ int run_join(std::string input, std::optional<std::string> output, bool force,
     }
 
     try {
-       dmi.join(input, [](int, int,
-                          std::string){});
-       dmi.save(outpath);
+        dmi.join(input, update_status);
+        dmi.save(outpath);
+        std::cout << "\r[  DONE ] " << std::setw(32)
+                  << fs::path(outpath) .filename().string();
+        std::flush(std::cout);
+        std::cout << "\n";
     } catch (DMIError &e) {
         std::cerr << "Error opening WebP: " << e.describe() << "\n";
-        return 1;
+        return 2;
+    }
+
+    return 0;
+}
+
+int run_search(std::string regex, std::vector<std::string> input) {
+    std::regex rx{regex};
+
+    for (auto &s : input) {
+        for (auto &p : fs::recursive_directory_iterator(s)) {
+            if (fs::is_regular_file(p) && p.path().extension() == ".dmi") {
+                try {
+                    DMI dmi;
+                    std::vector<std::string*> matches;
+                    dmi.load(p);
+                    for (auto &i : dmi.states)
+                        if (std::regex_search(i.name, rx))
+                            matches.push_back(&i.name);
+                    if (!matches.empty()) {
+                        std::cout << fs::relative(p).string()
+                                  << ": ";
+                        for (auto &m : matches)
+                            std::cout << *m << " ";
+                        std::cout << "\n";
+                    }
+                } catch (const DMIError &e) {
+                    // ignore errors, since it's not a DMI
+                }
+            }
+        }
     }
 
     return 0;
@@ -139,7 +173,7 @@ int main(int argc, char **argv) {
 
     std::vector<std::string> input;
     std::optional<std::string> output;
-    bool recurse, force;
+    bool force;
 
     ls->add_option("INPUT", input, "Input DMI(s)")->required();
     ls->callback([&]() {
@@ -152,24 +186,32 @@ int main(int argc, char **argv) {
 
     slice->add_option("INPUT", input, "Input DMI")->required();
     slice->add_option("-o,--output", output, "Rename the output directory");
-    slice->add_flag("-r,--recursive", recurse, "Recurse into directories");
     slice->add_flag("-f,--force", force, "Overwrite existing output");
     slice->callback([&]() {
                         for (auto &s : input)
-                            ret = run_slice(s, output, force, recurse);
+                            ret = run_slice(s, output, force);
                     });
 
     CLI::App *join =
         app.add_subcommand("join", "Join a directory into a DMI");
 
     join->add_option("INPUT", input, "Input directory")->required();
-    join->add_option("-o,--output", output, "Rename the output directory");
-    join->add_flag("-r,--recursive", recurse, "Recurse into directories");
+    join->add_option("-o,--output", output, "Rename the output file");
     join->add_flag("-f,--force", force, "Overwrite existing output");
     join->callback([&]() {
                        for (auto &s : input)
-                           ret = run_join(s, output, force, recurse);
+                           ret = run_join(s, output, force);
                    });
+
+    CLI::App *search =
+        app.add_subcommand("search", "Search a directory of DMIs for an icon state");
+
+    std::string regex;
+    search->add_option("REGEX", regex, "Regex to search with")->required();
+    search->add_option("INPUT", input, "Directories to search")->required();
+    search->callback([&]() {
+                         run_search(regex, input);
+                    });
 
     app.require_subcommand();
 

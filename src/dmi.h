@@ -35,6 +35,7 @@ public:
         static int dirnum(const std::string name);
 
         void write_frames(unsigned dir, std::filesystem::path path);
+        void reduplicate();
 
         std::vector<std::vector<Image>> images;
     };

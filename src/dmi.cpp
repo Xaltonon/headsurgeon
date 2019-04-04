@@ -262,6 +262,19 @@ int DMI::State::dirnum(const std::string name) {
         throw ReasonError("unknown direction name");
 }
 
+void DMI::State::reduplicate() {
+    frames = 0;
+    for (auto &d : images)
+        frames = std::max(frames, (unsigned) d.size());
+
+    for (auto &d : images) {
+        if (d.size() < frames) {
+            for (unsigned i = 0; i < d.size() - frames; i++)
+                d.push_back(d[0]);
+        }
+    }
+}
+
 void DMI::State::join(std::filesystem::path path) {
     if (fs::is_directory(path)) {
         images.resize(8);
@@ -284,16 +297,22 @@ void DMI::State::join(std::filesystem::path path) {
         loop = webp.loops;
     }
 
-    frames = images[0].size();
     dirs = images.size();
+    reduplicate();
 }
 
 void DMI::join(
     std::filesystem::path path,
     std::function<void(int total, int i, std::string name)> callback) {
+    unsigned total = 0;
+    for (auto &p : fs::directory_iterator(path))
+        (void) p, total++;
+
+    unsigned i = 0;
     for (auto &p : fs::directory_iterator(path)) {
         auto &state = states.emplace_back(p.path().stem());
         state.join(p);
+        callback(total, i++, state.name);
     }
 
     width = states[0].size().x;
