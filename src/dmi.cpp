@@ -14,7 +14,7 @@
 namespace fs = std::filesystem;
 
 void DMI::load(fs::path fname) {
-    name = fname.stem();
+    name = fname.stem().string();
     PNG png;
     png.load(fname);
 
@@ -280,7 +280,7 @@ void DMI::State::join(std::filesystem::path path) {
         for (auto &p : fs::directory_iterator(path)) {
             WebP webp;
             webp.load(p.path());
-            images[dirnum(p.path().stem())] = webp.frames;
+            images[dirnum(p.path().stem().string())] = webp.frames;
             delays = webp.delays;
             loop = webp.loops;
             total++;
@@ -308,7 +308,7 @@ void DMI::join(
 
     unsigned i = 0;
     for (auto &p : fs::directory_iterator(path)) {
-        auto &state = states.emplace_back(p.path().stem());
+        auto &state = states.emplace_back(p.path().stem().string());
         state.join(p);
         callback(total, i++, state.name);
     }

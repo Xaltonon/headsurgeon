@@ -40,14 +40,14 @@ public:
         std::vector<std::vector<Image>> images;
     };
 
-    void load(std::filesystem::path fname);
-    void
+    EXPORT void load(std::filesystem::path fname);
+    EXPORT void
     split(std::filesystem::path path,
           std::function<void(int total, int i, std::string name)> callback);
 
-    void save(std::filesystem::path fname);
-    void join(std::filesystem::path path,
-              std::function<void(int total, int i, std::string name)> callback);
+    EXPORT void save(std::filesystem::path fname);
+    EXPORT void join(std::filesystem::path path,
+                     std::function<void(int total, int i, std::string name)> callback);
 
     std::string name;
     float version = 4.0;
