@@ -4,14 +4,14 @@ dofile "premake/libwebp.lua"
 
 workspace "headsurgeon"
   configurations { "debug", "release" }
- 
+
   architecture "x86_64"
   systemversion "latest"
 
   filter "toolset:gcc or toolset:clang"
     buildoptions {"-Wall"}
     links { "stdc++fs" }
-    defines { "EXPORT" }
+    defines { "EXPORT=" }
 
   filter "configurations:debug"
     defines { "DEBUG" }
