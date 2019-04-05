@@ -13,4 +13,4 @@ libwebp:shared=True
 libui:shared=True
 
 [imports]
-bin, *.dll -> pkg
+bin, *.dll -> bin/release

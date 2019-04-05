@@ -46,3 +46,28 @@ project "hsdmi"
   links { "headsurgeon" }
   includedirs { "src", "cli/CLI11/include" }
   links { conan_libs_libpng, conan_libs_libwebp }
+
+project "hsgui"
+  kind "windowedapp"
+  language "c++"
+  cppdialect "c++17"
+  
+  files { "gui/*.cpp", "gui/*.h" }
+  
+  links { "headsurgeon" }
+  includedirs { "src" }
+  links { conan_libs_libui }
+  
+  filter "system:windows"
+    linkoptions { "/ENTRY:\"mainCRTStartup\"" }
+  
+newaction {
+  trigger = "package",
+  description = "Generate an installable package",
+  execute = function()
+    if os.target() == "windows" then
+      os.execute("candle -o obj/installer.wixobj pkg/windows/installer.wxs")
+      os.execute("light -ext WIXUiExtension obj/installer.wixobj -out bin/headsurgeon.msi")
+    end
+  end
+}
