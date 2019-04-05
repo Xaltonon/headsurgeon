@@ -4,19 +4,19 @@
 
 #include <CLI/CLI.hpp>
 
-#include "dmi.h"
 #include "codecs/webp.h"
+#include "dmi.h"
 
 namespace fs = std::filesystem;
 
 void update_status(int total, int i, std::string name) {
-    std::cout << "\r[" << std::setw(3) << i << "/"
-              << std::setw(3) << total << "] "
-              << std::setw(32) << name;
+    std::cout << "\r[" << std::setw(3) << i << "/" << std::setw(3) << total
+              << "] " << std::setw(32) << name;
     std::flush(std::cout);
 }
 
-int run_slice(std::string input, std::optional<std::string> output, bool force) {
+int run_slice(std::string input, std::optional<std::string> output,
+              bool force) {
     DMI dmi;
 
     if (!fs::exists(input)) {
@@ -74,23 +74,18 @@ int run_ls(std::string input) {
 
     std::cout << fs::path(input).filename().string() << "\n";
 
-    std::cout << std::setw(8) << "width"
-              << std::setw(8) << "height"
+    std::cout << std::setw(8) << "width" << std::setw(8) << "height"
               << "\n";
-    std::cout << std::setw(8) << dmi.width
-              << std::setw(8) << dmi.height
+    std::cout << std::setw(8) << dmi.width << std::setw(8) << dmi.height
               << "\n\n";
 
-    std::cout << std::setw(32) << "name"
-              << std::setw(5) << "dirs"
+    std::cout << std::setw(32) << "name" << std::setw(5) << "dirs"
               << std::setw(8) << "frames"
               << "\n";
 
     for (auto &s : dmi.states) {
-        std::cout << std::setw(32) << s.name
-                  << std::setw(5) << s.dirs
-                  << std::setw(8) << s.frames
-                  << "\n";
+        std::cout << std::setw(32) << s.name << std::setw(5) << s.dirs
+                  << std::setw(8) << s.frames << "\n";
     }
 
     std::cout << "\n";
@@ -110,11 +105,14 @@ int run_join(std::string input, std::optional<std::string> output, bool force) {
     if (output.has_value())
         outpath = output.value();
     else
-        outpath = (fs::path(input) / "").parent_path().stem().replace_extension("dmi");
+        outpath = (fs::path(input) / "")
+                      .parent_path()
+                      .stem()
+                      .replace_extension("dmi");
 
     if (fs::exists(outpath) && !force) {
         std::cerr << "Cowardly refusing to overwrite existing files (use -f to "
-            "force)\n";
+                     "force)\n";
         return 3;
     }
 
@@ -122,7 +120,7 @@ int run_join(std::string input, std::optional<std::string> output, bool force) {
         dmi.join(input, update_status);
         dmi.save(outpath);
         std::cout << "\r[  DONE ] " << std::setw(32)
-                  << fs::path(outpath) .filename().string();
+                  << fs::path(outpath).filename().string();
         std::flush(std::cout);
         std::cout << "\n";
     } catch (DMIError &e) {
@@ -141,14 +139,13 @@ int run_search(std::string regex, std::vector<std::string> input) {
             if (fs::is_regular_file(p) && p.path().extension() == ".dmi") {
                 try {
                     DMI dmi;
-                    std::vector<std::string*> matches;
+                    std::vector<std::string *> matches;
                     dmi.load(p);
                     for (auto &i : dmi.states)
                         if (std::regex_search(i.name, rx))
                             matches.push_back(&i.name);
                     if (!matches.empty()) {
-                        std::cout << fs::relative(p).string()
-                                  << ": ";
+                        std::cout << fs::relative(p).string() << ": ";
                         for (auto &m : matches)
                             std::cout << *m << " ";
                         std::cout << "\n";
@@ -168,8 +165,7 @@ int main(int argc, char **argv) {
 
     CLI::App app{"hsdmi - Manipulate BYOND DMIs"};
 
-    CLI::App *ls =
-        app.add_subcommand("ls", "List icon states in a DMI");
+    CLI::App *ls = app.add_subcommand("ls", "List icon states in a DMI");
 
     std::vector<std::string> input;
     std::optional<std::string> output;
@@ -177,9 +173,9 @@ int main(int argc, char **argv) {
 
     ls->add_option("INPUT", input, "Input DMI(s)")->required();
     ls->callback([&]() {
-                     for (auto &s : input)
-                         ret = run_ls(s);
-                 });
+        for (auto &s : input)
+            ret = run_ls(s);
+    });
 
     CLI::App *slice =
         app.add_subcommand("slice", "Slice a DMI into a directory");
@@ -188,30 +184,27 @@ int main(int argc, char **argv) {
     slice->add_option("-o,--output", output, "Rename the output directory");
     slice->add_flag("-f,--force", force, "Overwrite existing output");
     slice->callback([&]() {
-                        for (auto &s : input)
-                            ret = run_slice(s, output, force);
-                    });
+        for (auto &s : input)
+            ret = run_slice(s, output, force);
+    });
 
-    CLI::App *join =
-        app.add_subcommand("join", "Join a directory into a DMI");
+    CLI::App *join = app.add_subcommand("join", "Join a directory into a DMI");
 
     join->add_option("INPUT", input, "Input directory")->required();
     join->add_option("-o,--output", output, "Rename the output file");
     join->add_flag("-f,--force", force, "Overwrite existing output");
     join->callback([&]() {
-                       for (auto &s : input)
-                           ret = run_join(s, output, force);
-                   });
+        for (auto &s : input)
+            ret = run_join(s, output, force);
+    });
 
-    CLI::App *search =
-        app.add_subcommand("search", "Search a directory of DMIs for an icon state");
+    CLI::App *search = app.add_subcommand(
+        "search", "Search a directory of DMIs for an icon state");
 
     std::string regex;
     search->add_option("REGEX", regex, "Regex to search with")->required();
     search->add_option("INPUT", input, "Directories to search")->required();
-    search->callback([&]() {
-                         run_search(regex, input);
-                    });
+    search->callback([&]() { run_search(regex, input); });
 
     app.require_subcommand();
 

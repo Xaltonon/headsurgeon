@@ -237,9 +237,7 @@ void DMI::State::write_frames(unsigned int dir, std::filesystem::path path) {
     webp.save(path.replace_extension("webp"));
 }
 
-Vec DMI::State::size() const {
-    return images[0][0].size;
-}
+Vec DMI::State::size() const { return images[0][0].size; }
 
 int DMI::State::dirnum(const std::string name) {
     if (name == "down")
@@ -265,7 +263,7 @@ int DMI::State::dirnum(const std::string name) {
 void DMI::State::reduplicate() {
     frames = 0;
     for (auto &d : images)
-        frames = std::max(frames, (unsigned) d.size());
+        frames = std::max(frames, (unsigned)d.size());
 
     for (auto &d : images) {
         if (d.size() < frames) {
@@ -306,7 +304,7 @@ void DMI::join(
     std::function<void(int total, int i, std::string name)> callback) {
     unsigned total = 0;
     for (auto &p : fs::directory_iterator(path))
-        (void) p, total++;
+        (void)p, total++;
 
     unsigned i = 0;
     for (auto &p : fs::directory_iterator(path)) {

@@ -1,3 +1,5 @@
+dofile "premake/wx.lua"
+
 workspace "headsurgeon"
   configurations { "debug", "release" }
 
@@ -27,7 +29,18 @@ project "hsdmi"
   language "c++"
   cppdialect "c++17"
 
-  files { "cli/*.cpp", "cli/*.h"}
+  files { "cli/*.cpp", "cli/*.h" }
 
   links { "headsurgeon", "stdc++fs" }
   includedirs { "src", "cli/CLI11/include" }
+
+project "hsgui"
+  kind "windowedapp"
+  language "c++"
+  cppdialect "c++17"
+
+  files { "gui/*.cpp", "gui/*.h" }
+
+  links { "headsurgeon", "stdc++fs" }
+  includedirs { "src", "gui" }
+  wx_config()
