@@ -1,12 +1,14 @@
-dofile "premake/wx.lua"
-dofile "premake/libpng.lua"
-dofile "premake/libwebp.lua"
+dofile "conanbuildinfo.lua"
 
 workspace "headsurgeon"
   configurations { "debug", "release" }
 
   architecture "x86_64"
   systemversion "latest"
+  
+  includedirs { conan_includedirs }
+  bindirs { conan_bindirs }
+  libdirs { conan_libdirs }
 
   filter "toolset:gcc or toolset:clang"
     buildoptions {"-Wall"}
@@ -24,10 +26,6 @@ workspace "headsurgeon"
   filter "system:windows"
     defines { "EXPORT=__declspec(dllexport)" }
 
-workspace "headsurgeon"
-  libwebp_build()
-  libpng_build()
-
 project "headsurgeon"
   language "c++"
   cppdialect "c++17"
@@ -36,9 +34,8 @@ project "headsurgeon"
   files { "src/*.cpp", "src/*.h", "src/codecs/*.cpp", "src/codecs/*.h" }
 
   includedirs { "src" }
-  libpng_config()
-  libwebp_config()
-
+  links { conan_libs_libpng, conan_libs_libwebp }
+  
 project "hsdmi"
   kind "consoleapp"
   language "c++"
@@ -48,18 +45,4 @@ project "hsdmi"
 
   links { "headsurgeon" }
   includedirs { "src", "cli/CLI11/include" }
-  libpng_config()
-  libwebp_config()
-
---[[
-project "hsgui"
-  kind "windowedapp"
-  language "c++"
-  cppdialect "c++17"
-
-  files { "gui/*.cpp", "gui/*.h" }
-
-  links { "headsurgeon" }
-  includedirs { "src", "gui" }
-  wx_config()
---]]
+  links { conan_libs_libpng, conan_libs_libwebp }
