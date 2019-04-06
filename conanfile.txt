@@ -1,7 +1,6 @@
 [requires]
 libpng/1.6.36@bincrafters/stable
 libwebp/1.0.0@bincrafters/stable
-libui/0.4.1@bincrafters/stable
 
 [generators]
 premake
@@ -10,7 +9,6 @@ premake
 libpng:shared=True
 zlib:shared=True
 libwebp:shared=True
-libui:shared=True
 
 [imports]
 bin, *.dll -> bin/release

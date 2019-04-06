@@ -1,11 +1,11 @@
-dofile "conanbuildinfo.lua"
+dofile "conanbuildinfo.premake.lua"
 
 workspace "headsurgeon"
   configurations { "debug", "release" }
 
   architecture "x86_64"
   systemversion "latest"
-  
+
   includedirs { conan_includedirs }
   bindirs { conan_bindirs }
   libdirs { conan_libdirs }
@@ -35,7 +35,7 @@ project "headsurgeon"
 
   includedirs { "src" }
   links { conan_libs_libpng, conan_libs_libwebp }
-  
+
 project "hsdmi"
   kind "consoleapp"
   language "c++"
@@ -47,20 +47,20 @@ project "hsdmi"
   includedirs { "src", "cli/CLI11/include" }
   links { conan_libs_libpng, conan_libs_libwebp }
 
-project "hsgui"
-  kind "windowedapp"
-  language "c++"
-  cppdialect "c++17"
-  
-  files { "gui/*.cpp", "gui/*.h" }
-  
-  links { "headsurgeon" }
-  includedirs { "src" }
-  links { conan_libs_libui }
-  
-  filter "system:windows"
-    linkoptions { "/ENTRY:\"mainCRTStartup\"" }
-  
+-- project "hsgui"
+--   kind "windowedapp"
+--   language "c++"
+--   cppdialect "c++17"
+
+--   files { "gui/*.cpp", "gui/*.h" }
+
+--   links { "headsurgeon" }
+--   includedirs { "src" }
+--   links { conan_libs_libui }
+
+--   filter "system:windows"
+--     linkoptions { "/ENTRY:\"mainCRTStartup\"" }
+
 newaction {
   trigger = "package",
   description = "Generate an installable package",
