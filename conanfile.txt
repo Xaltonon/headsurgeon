@@ -1,6 +1,7 @@
 [requires]
 libpng/1.6.36@bincrafters/stable
 libwebp/1.0.0@bincrafters/stable
+CLI11/1.7.1@cliutils/stable
 
 [generators]
 premake

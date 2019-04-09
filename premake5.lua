@@ -1,4 +1,4 @@
-dofile "conanbuildinfo.premake.lua"
+dofile "deps.lua"
 
 workspace "headsurgeon"
   configurations { "debug", "release" }
@@ -33,7 +33,7 @@ project "headsurgeon"
 
   files { "src/*.cpp", "src/*.h", "src/codecs/*.cpp", "src/codecs/*.h" }
 
-  includedirs { "src" }
+  includedirs { "src", libpng_includedirs, libwebp_includedirs }
   links { conan_libs_libpng, conan_libs_libwebp }
 
 project "hsdmi"
@@ -43,9 +43,8 @@ project "hsdmi"
 
   files { "cli/*.cpp", "cli/*.h" }
 
-  links { "headsurgeon" }
   includedirs { "src", "cli/CLI11/include" }
-  links { conan_libs_libpng, conan_libs_libwebp }
+  links { "headsurgeon", conan_libs_libpng, conan_libs_libwebp }
 
 -- project "hsgui"
 --   kind "windowedapp"
