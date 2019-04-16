@@ -1,0 +1,10 @@
+import libs = libheadsurgeon%lib{headsurgeon} cli11%lib{cli11}
+
+if ($cxx.class == 'gcc')
+{
+  import libs += lib{stdc++fs}
+}
+
+exe{hsdmi}: {cxx}{*} $libs
+
+cxx.poptions =+ "-I$out_root" "-I$src_root"

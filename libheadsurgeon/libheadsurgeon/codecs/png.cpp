@@ -1,6 +1,6 @@
-#include "codecs/png.h"
-#include "codecs/file.h"
-#include "errors.h"
+#include "libheadsurgeon/codecs/png.hpp"
+#include "libheadsurgeon/codecs/file.hpp"
+#include "libheadsurgeon/errors.hpp"
 
 #include <algorithm>
 #include <cstring>

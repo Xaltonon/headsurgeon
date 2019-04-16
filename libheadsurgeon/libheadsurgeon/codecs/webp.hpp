@@ -4,7 +4,7 @@
 #include <vector>
 #include <webp/demux.h>
 
-#include "codecs/image.h"
+#include "libheadsurgeon/codecs/image.hpp"
 
 class WebP {
 public:

@@ -1,0 +1,10 @@
+cxx.std = c++17
+
+using cxx
+
+hxx{*}: extension = hpp
+ixx{*}: extension = ipp
+txx{*}: extension = tpp
+cxx{*}: extension = cpp
+
+test.target = $cxx.target

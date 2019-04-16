@@ -6,7 +6,7 @@
 #include <filesystem>
 #include <fstream>
 
-#include "codecs/image.h"
+#include "libheadsurgeon/codecs/image.hpp"
 
 class PNG {
 public:

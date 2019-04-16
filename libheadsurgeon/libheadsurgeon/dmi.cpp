@@ -1,4 +1,4 @@
-#include "dmi.h"
+#include "dmi.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -7,9 +7,10 @@
 #include <iostream>
 #include <sstream>
 
-#include "codecs/png.h"
-#include "codecs/webp.h"
-#include "errors.h"
+#include "libheadsurgeon/codecs/png.hpp"
+#include "libheadsurgeon/codecs/webp.hpp"
+#include "libheadsurgeon/errors.hpp"
+#include "libheadsurgeon/version.hpp"
 
 namespace fs = std::filesystem;
 

@@ -2,10 +2,9 @@
 #include <iostream>
 #include <regex>
 
-#include <CLI/CLI.hpp>
+#include <CLI11.hpp>
 
-#include "codecs/webp.h"
-#include "dmi.h"
+#include <libheadsurgeon/dmi.hpp>
 
 namespace fs = std::filesystem;
 

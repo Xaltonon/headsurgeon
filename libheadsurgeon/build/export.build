@@ -1,0 +1,6 @@
+$out_root/
+{
+  include libheadsurgeon/
+}
+
+export $out_root/libheadsurgeon/$import.target

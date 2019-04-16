@@ -1,5 +1,5 @@
-#include "codecs/webp.h"
-#include "codecs/file.h"
+#include "libheadsurgeon/codecs/webp.hpp"
+#include "libheadsurgeon/codecs/file.hpp"
 
 #include <algorithm>
 

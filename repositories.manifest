@@ -1,0 +1,5 @@
+: 1
+summary: headsurgeon project repository
+:
+role: prerequisite
+location: https://github.com/Xaltonon/xal-bpkg.git#master

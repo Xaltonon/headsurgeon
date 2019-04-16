@@ -1,6 +1,5 @@
-#include "codecs/file.h"
-
-#include "errors.h"
+#include "libheadsurgeon/codecs/file.hpp"
+#include "libheadsurgeon/errors.hpp"
 
 FileHandle::FileHandle(const char *fname, const char *mode) {
     file = fopen(fname, mode);

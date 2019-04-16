@@ -6,9 +6,10 @@
 #include <string>
 #include <vector>
 
-#include "codecs/image.h"
-#include "codecs/png.h"
-#include "errors.h"
+#include "libheadsurgeon/codecs/image.hpp"
+#include "libheadsurgeon/codecs/png.hpp"
+#include "libheadsurgeon/errors.hpp"
+#include "libheadsurgeon/export.hpp"
 
 class DMI {
 public:
@@ -40,14 +41,15 @@ public:
         std::vector<std::vector<Image>> images;
     };
 
-    EXPORT void load(std::filesystem::path fname);
-    EXPORT void
+    LIBHEADSURGEON_SYMEXPORT void load(std::filesystem::path fname);
+    LIBHEADSURGEON_SYMEXPORT void
     split(std::filesystem::path path,
           std::function<void(int total, int i, std::string name)> callback);
 
-    EXPORT void save(std::filesystem::path fname);
-    EXPORT void join(std::filesystem::path path,
-                     std::function<void(int total, int i, std::string name)> callback);
+    LIBHEADSURGEON_SYMEXPORT void save(std::filesystem::path fname);
+    LIBHEADSURGEON_SYMEXPORT void
+    join(std::filesystem::path path,
+         std::function<void(int total, int i, std::string name)> callback);
 
     std::string name;
     float version = 4.0;

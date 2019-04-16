@@ -1,6 +1,6 @@
-#include "errors.h"
-
 #include <sstream>
+
+#include "libheadsurgeon/errors.hpp"
 
 ReasonError::ReasonError(const char *reason) : reason(reason) {}
 
