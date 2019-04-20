@@ -12,7 +12,7 @@
 WebP::WebP(std::vector<Image> frames, std::vector<float> delays, unsigned loops)
     : frames(frames), delays(delays), loops(loops) {}
 
-void WebP::save(std::filesystem::path path) {
+void WebP::save(fs::path path) {
     Vec size = frames[0].size;
 
     WebPConfig config;
@@ -75,9 +75,9 @@ WebP::DecoderHandle::~DecoderHandle() {
     WebPAnimDecoderDelete(d);
 }
 
-void WebP::load(std::filesystem::path path) {
+void WebP::load(fs::path path) {
     FileHandle file{path.string().c_str(), "rb"};
-    size_t size = std::filesystem::file_size(path);
+    size_t size = fs::file_size(path);
 
     WebPData data;
     WebPDataInit(&data);

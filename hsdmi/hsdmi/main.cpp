@@ -1,12 +1,10 @@
-#include <filesystem>
 #include <iostream>
 #include <regex>
 
-#include <CLI11.hpp>
+#include <CLI/CLI.hpp>
 
 #include <libheadsurgeon/dmi.hpp>
-
-namespace fs = std::filesystem;
+#include <libheadsurgeon/filesystem.hpp>
 
 void update_status(int total, int i, std::string name) {
     std::cout << "\r[" << std::setw(3) << i << "/" << std::setw(3) << total

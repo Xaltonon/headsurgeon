@@ -1,9 +1,13 @@
 import int_libs = libpng%lib{png}
 import imp_libs = libwebp%lib{webp}
 
-if ($cxx.id == 'gcc')
+if ($cxx.stdlib == 'libstdc++')
 {
   import int_libs += lib{stdc++fs}
+}
+elif ($cxx.stdlib == 'libc++')
+{
+  import int_libs += lib{c++experimental}
 }
 
 lib{headsurgeon}: {hxx cxx}{** -version} hxx{version} $imp_libs $int_libs

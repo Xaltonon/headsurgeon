@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdio>
-#include <filesystem>
 #include <functional>
 #include <string>
 #include <vector>
@@ -10,6 +9,7 @@
 #include "libheadsurgeon/codecs/png.hpp"
 #include "libheadsurgeon/errors.hpp"
 #include "libheadsurgeon/export.hpp"
+#include "libheadsurgeon/filesystem.hpp"
 
 class DMI {
 public:
@@ -18,10 +18,10 @@ public:
         State(std::string name);
 
         void load(PNG &png, unsigned width, unsigned height, unsigned &index);
-        void split(std::filesystem::path path);
+        void split(fs::path path);
 
         void save(PNG &png, unsigned &index);
-        void join(std::filesystem::path path);
+        void join(fs::path path);
 
         std::string name;
         unsigned dirs = 1;
@@ -35,20 +35,20 @@ public:
         static const char *dirname(unsigned d);
         static int dirnum(const std::string name);
 
-        void write_frames(unsigned dir, std::filesystem::path path);
+        void write_frames(unsigned dir, fs::path path);
         void reduplicate();
 
         std::vector<std::vector<Image>> images;
     };
 
-    LIBHEADSURGEON_SYMEXPORT void load(std::filesystem::path fname);
+    LIBHEADSURGEON_SYMEXPORT void load(fs::path fname);
     LIBHEADSURGEON_SYMEXPORT void
-    split(std::filesystem::path path,
+    split(fs::path path,
           std::function<void(int total, int i, std::string name)> callback);
 
-    LIBHEADSURGEON_SYMEXPORT void save(std::filesystem::path fname);
+    LIBHEADSURGEON_SYMEXPORT void save(fs::path fname);
     LIBHEADSURGEON_SYMEXPORT void
-    join(std::filesystem::path path,
+    join(fs::path path,
          std::function<void(int total, int i, std::string name)> callback);
 
     std::string name;

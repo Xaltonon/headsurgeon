@@ -3,9 +3,9 @@
 #include <png.h>
 
 #include <cstdio>
-#include <filesystem>
 #include <fstream>
 
+#include "libheadsurgeon/filesystem.hpp"
 #include "libheadsurgeon/codecs/image.hpp"
 
 class PNG {
@@ -16,10 +16,10 @@ public:
     PNG &operator=(const PNG &) = delete;
     ~PNG();
 
-    void load(std::filesystem::path path);
+    void load(fs::path path);
     Image slice(Vec pos, Vec size);
 
-    void save(std::filesystem::path path);
+    void save(fs::path path);
     void insert(Vec pos, Image img);
 
     Vec image_size;

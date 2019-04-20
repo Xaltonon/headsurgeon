@@ -3,16 +3,14 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
-#include <filesystem>
 #include <iostream>
 #include <sstream>
 
 #include "libheadsurgeon/codecs/png.hpp"
 #include "libheadsurgeon/codecs/webp.hpp"
 #include "libheadsurgeon/errors.hpp"
+#include "libheadsurgeon/filesystem.hpp"
 #include "libheadsurgeon/version.hpp"
-
-namespace fs = std::filesystem;
 
 void DMI::load(fs::path fname) {
     name = fname.stem().string();
@@ -233,7 +231,7 @@ void DMI::State::split(fs::path path) {
     }
 }
 
-void DMI::State::write_frames(unsigned int dir, std::filesystem::path path) {
+void DMI::State::write_frames(unsigned int dir, fs::path path) {
     WebP webp{images[dir], delays, loop};
     webp.save(path.replace_extension("webp"));
 }
@@ -274,7 +272,7 @@ void DMI::State::reduplicate() {
     }
 }
 
-void DMI::State::join(std::filesystem::path path) {
+void DMI::State::join(fs::path path) {
     if (fs::is_directory(path)) {
         images.resize(8);
         unsigned total = 0;
@@ -301,7 +299,7 @@ void DMI::State::join(std::filesystem::path path) {
 }
 
 void DMI::join(
-    std::filesystem::path path,
+    fs::path path,
     std::function<void(int total, int i, std::string name)> callback) {
     unsigned total = 0;
     for (auto &p : fs::directory_iterator(path))

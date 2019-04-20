@@ -66,7 +66,7 @@ static bool dmi_check_sig(uint8_t *sig) {
     return std::equal(sig, sig + 4, expected);
 }
 
-void PNG::load(std::filesystem::path path) {
+void PNG::load(fs::path path) {
     FileHandle file(path.string().c_str(), "rb");
 
     uint8_t sig[8];
@@ -105,7 +105,7 @@ void PNG::load(std::filesystem::path path) {
     text = std::string(t->text);
 }
 
-void PNG::save(std::filesystem::path path) {
+void PNG::save(fs::path path) {
     FileHandle file(path.string().c_str(), "wb");
     WriteHandle handle;
 
