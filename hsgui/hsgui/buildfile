@@ -1,4 +1,9 @@
-import libs += libui%lib{ui}
+import libs += libui%lib{ui} libheadsurgeon%lib{headsurgeon}
+
+if ($cc.target.class == 'linux')
+{
+  import libs += lib{pthread}
+}
 
 exe{hsgui}: {hxx ixx txx cxx}{**} $libs
 
