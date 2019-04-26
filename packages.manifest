@@ -2,3 +2,5 @@
 location: libheadsurgeon/
 :
 location: hsdmi/
+:
+location: hsgui/

@@ -1,0 +1,13 @@
+cxx.std = latest
+
+using cxx
+
+hxx{*}: extension = hpp
+ixx{*}: extension = ipp
+txx{*}: extension = tpp
+cxx{*}: extension = cpp
+
+if ($cc.target.system == 'win32-msvc')
+{
+  cc.coptions += /subsystem:windows /entry:mainCRTStartup
+}

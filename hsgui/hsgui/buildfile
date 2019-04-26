@@ -1,0 +1,5 @@
+import libs += libui%lib{ui}
+
+exe{hsgui}: {hxx ixx txx cxx}{**} $libs
+
+cxx.poptions =+ "-I$out_root" "-I$src_root"

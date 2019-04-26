@@ -1,0 +1,11 @@
+: 1
+name: hsgui
+version: 0.1.0
+project: headsurgeon
+summary: GUI for manipulating DMI files
+license: MIT
+email: xaltonon@gmail.com
+depends: * build2 >= 0.9.0-
+depends: * bpkg >= 0.9.0-
+depends: libheadsurgeon ^0.1.0
+depends: libui ^0.4.1
