@@ -1,10 +1,24 @@
 #pragma once
 
 #include <libheadsurgeon/filesystem.hpp>
+#include <libheadsurgeon/dmi.hpp>
 #include <ui.h>
 
 #include <optional>
 #include <thread>
+
+struct DMITableHandler {
+    DMITableHandler(DMI &dmi);
+
+    uiTableModelHandler handler;
+    DMI &dmi;
+
+    int NumColumns();
+    uiTableValueType ColumnType(int);
+    int NumRows();
+    uiTableValue *CellValue(int, int);
+    void SetCellValue(int, int, const uiTableValue *);
+};
 
 class Hsgui {
 public:
@@ -35,13 +49,17 @@ protected:
 
     void on_slice();
     void on_join();
+    void on_save();
     int on_quit();
 
+    void refresh_table();
     void slice(fs::path f);
+    void slice_save();
 
 private:
     Mode current_mode;
     std::optional<std::thread> current_op;
+    DMI dmi;
 
     uiInitOptions ui_opts;
 
@@ -51,7 +69,7 @@ private:
     uiButton *save_button;
 
     uiTable *icon_table;
-    uiTableModelHandler t_handler;
+    DMITableHandler t_handler;
     uiTableModel *t_model;
     uiProgressBar *progress_bar;
     uiLabel *status_bar;
