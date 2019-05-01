@@ -25,9 +25,9 @@ Hsgui::Hsgui()
 
     icon_view = new QListView;
     icon_view->setModel(&dmi_model);
+    icon_view->setViewMode(QListView::IconMode);
     icon_view->setFlow(QListView::LeftToRight);
     icon_view->setResizeMode(QListView::Adjust);
-    icon_view->setViewMode(QListView::IconMode);
     icon_view->setSelectionMode(QListView::MultiSelection);
 
     auto selection_model = icon_view->selectionModel();

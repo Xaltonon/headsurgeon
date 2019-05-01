@@ -20,7 +20,7 @@ void Worker::save_states(DMI *dmi, QModelIndexList indices, fs::path fname) {
     int total = indices.size();
     for (int i = 0; i < total; i++) {
         int index = indices[i].row();
-        auto &s = dmi->states[i];
+        auto &s = dmi->states[index];
         emit on_save_progress(i, &s.name);
         try {
             s.split(fname / s.name);
