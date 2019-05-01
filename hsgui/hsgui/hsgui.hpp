@@ -1,80 +1,53 @@
 #pragma once
 
-#include <libheadsurgeon/filesystem.hpp>
+#include <QLabel>
+#include <QListView>
+#include <QProgressBar>
+#include <QPushButton>
+#include <QWidget>
+#include <QMutex>
 #include <libheadsurgeon/dmi.hpp>
-#include <ui.h>
 
-#include <optional>
-#include <thread>
+#include "worker.hpp"
+#include "dmi_model.hpp"
 
-struct DMITableHandler {
-    DMITableHandler(DMI &dmi);
+class Hsgui : public QWidget {
+    Q_OBJECT
 
-    uiTableModelHandler handler;
-    DMI &dmi;
-
-    int NumColumns();
-    uiTableValueType ColumnType(int);
-    int NumRows();
-    uiTableValue *CellValue(int, int);
-    void SetCellValue(int, int, const uiTableValue *);
-};
-
-class Hsgui {
 public:
     Hsgui();
-
-    void run();
+    ~Hsgui();
 
 protected:
-    enum class Mode {
-        IDLE,
-        SLICING,
-        JOINING,
-    };
+    void update_display();
 
-    template <typename T, void (Hsgui::*F)()> auto cb() {
-        return [](T, void *d) {
-            Hsgui *g = static_cast<Hsgui *>(d);
-            (g->*F)();
-        };
-    }
-
-    template <typename T, int (Hsgui::*F)()> auto cb() {
-        return [](T, void *d) {
-            Hsgui *g = static_cast<Hsgui *>(d);
-            return (g->*F)();
-        };
-    }
-
+public slots:
     void on_slice();
-    void on_join();
-    void on_save();
-    int on_quit();
+    void on_slice_done(bool success);
 
-    void refresh_table();
-    void slice(fs::path f);
-    void slice_save();
+    void on_save();
+    void on_save_progress(int c, std::string *state);
+    void on_save_done(bool success);
+
+    void on_selection_change(const QItemSelection &selected,
+                             const QItemSelection &deselected);
+
+signals:
+    void slice_dmi(DMI *dmi, fs::path fname);
+    void save_states(DMI *dmi, QModelIndexList indices, fs::path fname);
 
 private:
-    Mode current_mode;
-    std::optional<std::thread> current_op;
+    bool busy = false;
+    QThread worker_thread;
+    Worker worker;
     DMI dmi;
+    DMIModel dmi_model;
 
-    uiInitOptions ui_opts;
+    QPushButton *slice_button;
+    QPushButton *save_button;
 
-    uiWindow *window;
-    uiButton *slice_button;
-    uiButton *join_button;
-    uiButton *save_button;
+    QListView *icon_view;
 
-    uiTable *icon_table;
-    DMITableHandler t_handler;
-    uiTableModel *t_model;
-    uiProgressBar *progress_bar;
-    uiLabel *status_bar;
-
-    uiBox *vbox;
-    uiBox *button_box;
-    uiBox *bottom_box;
+    QLabel *status_label;
+    QProgressBar *progress_bar;
 };

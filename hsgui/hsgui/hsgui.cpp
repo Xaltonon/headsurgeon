@@ -1,185 +1,154 @@
 #include "hsgui/hsgui.hpp"
 
-#include <cstdlib>
-#include <iostream>
+#include <QApplication>
+#include <QFileDialog>
+#include <QVBoxLayout>
+
 #include <sstream>
-#include <thread>
+
+Hsgui::Hsgui()
+    : dmi_model(dmi)
+{
+    setWindowTitle("Headsurgeon");
+
+    slice_button = new QPushButton{"Slice"};
+    slice_button->connect(slice_button, &QPushButton::clicked, this,
+                          &Hsgui::on_slice);
+    save_button = new QPushButton{"Save All"};
+    save_button->connect(save_button, &QPushButton::clicked, this,
+                         &Hsgui::on_save);
+    save_button->setEnabled(false);
+
+    QHBoxLayout *control_box = new QHBoxLayout;
+    control_box->addWidget(slice_button);
+    control_box->addWidget(save_button);
+
+    icon_view = new QListView;
+    icon_view->setModel(&dmi_model);
+    icon_view->setFlow(QListView::LeftToRight);
+    icon_view->setResizeMode(QListView::Adjust);
+    icon_view->setViewMode(QListView::IconMode);
+    icon_view->setSelectionMode(QListView::MultiSelection);
+
+    auto selection_model = icon_view->selectionModel();
+    connect(selection_model, &QItemSelectionModel::selectionChanged,
+            this, &Hsgui::on_selection_change);
+
+    progress_bar = new QProgressBar;
+
+    status_label = new QLabel;
+    status_label->setSizePolicy({QSizePolicy::Expanding, QSizePolicy::Fixed});
+
+    QVBoxLayout *vbox = new QVBoxLayout;
+    vbox->addLayout(control_box);
+    vbox->addWidget(icon_view);
+    vbox->addWidget(progress_bar);
+    vbox->addWidget(status_label);
+
+    setLayout(vbox);
+
+    qRegisterMetaType<fs::path>("fs::path");
+    qRegisterMetaType<QModelIndexList>("QModelIndexList");
+    connect(this, &Hsgui::slice_dmi, &worker, &Worker::slice_dmi);
+    connect(&worker, &Worker::on_slice_done, this, &Hsgui::on_slice_done);
+    connect(this, &Hsgui::save_states, &worker, &Worker::save_states);
+    connect(&worker, &Worker::on_save_progress, this, &Hsgui::on_save_progress);
+    connect(&worker, &Worker::on_save_done, this, &Hsgui::on_save_done);
+    worker.moveToThread(&worker_thread);
+    worker_thread.start();
+}
+
+Hsgui::~Hsgui() {
+    worker_thread.quit();
+    worker_thread.wait();
+}
 
 void Hsgui::on_slice() {
-    if (current_op) {
-        current_op.value().join();
-        current_op.reset();
-    }
-
-    char *f = uiOpenFile(window);
-    if (!f)
+    auto file = QFileDialog::getOpenFileName(this, "Select DMI to slice.", "",
+                                             "DMI Files (*.dmi)");
+    if (file == "")
         return;
 
-    uiControlDisable(uiControl(slice_button));
-    uiControlDisable(uiControl(join_button));
-    uiControlDisable(uiControl(save_button));
+    slice_button->setEnabled(false);
+    save_button->setEnabled(false);
+    progress_bar->setRange(0, 0);
 
-    current_op.emplace(&Hsgui::slice, this, fs::path(f));
-    uiFreeText(f);
-}
-
-void Hsgui::refresh_table() {}
-
-void Hsgui::slice(fs::path f) {
-    std::stringstream message{};
-    int prev_size = dmi.states.size();
-
-    uiProgressBarSetValue(progress_bar, -1);
-
-    try {
-        dmi = DMI();
-        dmi.load(f);
-    } catch (const DMIError &e) {
-        uiLabelSetText(status_bar, e.describe().c_str());
-        goto end;
-    }
-
-    refresh_table();
-
-    message << "loaded " << dmi.states.size() << " icon states";
-    uiLabelSetText(status_bar, message.str().c_str());
-    current_mode = Mode::SLICING;
-    uiControlEnable(uiControl(save_button));
-
-end:
-    int new_size = dmi.states.size();
-    for (int i = 0; i < std::min(prev_size, new_size); i++)
-        uiTableModelRowChanged(t_model, i);
-    if (new_size < prev_size)
-        for (int i = new_size; i < prev_size; i++)
-            uiTableModelRowDeleted(t_model, i);
-    else
-        for (int i = prev_size; i < new_size; i++)
-            uiTableModelRowInserted(t_model, i);
-
-    uiControlEnable(uiControl(slice_button));
-    uiControlEnable(uiControl(join_button));
-    uiProgressBarSetValue(progress_bar, 0);
-}
-
-void Hsgui::on_join() {}
-
-void Hsgui::slice_save() {
-
-end:
-    uiControlEnable(uiControl(slice_button));
-    uiControlEnable(uiControl(join_button));
-    uiProgressBarSetValue(progress_bar, 0);
+    emit slice_dmi(&dmi, file.toStdString());
 }
 
 void Hsgui::on_save() {
-    if (current_op) {
-        current_op.value().join();
-        current_op.reset();
+    auto dir = QFileDialog::getExistingDirectory(this, "Select output folder.", "");
+
+    if (dir == "")
+        return;
+
+    slice_button->setEnabled(false);
+    save_button->setEnabled(false);
+    progress_bar->setValue(0);
+
+    auto indices = icon_view->selectionModel()->selectedIndexes();
+    if (!indices.size())
+        for (int i = 0; i < dmi.states.size(); i++)
+            indices.push_back(dmi_model.index(i));
+
+    progress_bar->setRange(0, indices.size());
+    emit save_states(&dmi, indices, dir.toStdString());
+}
+
+void Hsgui::on_slice_done(bool success) {
+    slice_button->setEnabled(true);
+    progress_bar->setRange(0, 100);
+    progress_bar->reset();
+
+    update_display();
+
+    if (!success) {
+        status_label->setText(QString::fromStdString(worker.failure_reason));
+        return;
     }
 
-    if (current_mode == Mode::SLICING) {
-        uiControlDisable(uiControl(slice_button));
-        uiControlDisable(uiControl(join_button));
-        uiControlDisable(uiControl(save_button));
-        current_op.emplace(&Hsgui::slice_save, this);
-    }
+    std::stringstream message;
+    message << "Loaded " << dmi.states.size() << " icon states.";
+    status_label->setText(QString::fromStdString(message.str()));
+
+    save_button->setEnabled(true);
 }
 
-int Hsgui::on_quit() {
-    if (current_op)
-        current_op.value().join();
+void Hsgui::on_save_done(bool success) {
+    slice_button->setEnabled(true);
+    save_button->setEnabled(true);
+    progress_bar->setRange(0, 100);
+    progress_bar->reset();
 
-    uiQuit();
-    return 1;
+    if (success)
+        status_label->setText("Successfully saved icon states.");
+    else
+        status_label->setText(QString::fromStdString(worker.failure_reason));
 }
 
-Hsgui::Hsgui() : current_mode(Mode::IDLE), current_op(), dmi(), t_handler(dmi) {
-    uiInit(&ui_opts);
-
-    window = uiNewWindow("Headsurgeon", 320, 240, false);
-    uiWindowSetMargined(window, true);
-
-    slice_button = uiNewButton("Slice");
-    uiButtonOnClicked(slice_button, cb<uiButton *, &Hsgui::on_slice>(), this);
-    join_button = uiNewButton("Join");
-    uiButtonOnClicked(join_button, cb<uiButton *, &Hsgui::on_join>(), this);
-    save_button = uiNewButton("Save");
-    uiControlDisable(uiControl(save_button));
-    uiButtonOnClicked(save_button, cb<uiButton *, &Hsgui::on_join>(), this);
-
-    button_box = uiNewHorizontalBox();
-    uiBoxSetPadded(button_box, true);
-    uiBoxAppend(button_box, uiControl(slice_button), true);
-    uiBoxAppend(button_box, uiControl(join_button), true);
-
-    auto mh = reinterpret_cast<uiTableModelHandler*>(&t_handler);
-    t_model = uiNewTableModel(mh);
-
-    uiTableParams t_params{t_model, -1};
-    icon_table = uiNewTable(&t_params);
-    uiTableAppendTextColumn(icon_table, "Icon State", 0, -1, nullptr);
-
-    progress_bar = uiNewProgressBar();
-    status_bar = uiNewLabel("");
-
-    bottom_box = uiNewHorizontalBox();
-    uiBoxSetPadded(bottom_box, true);
-    uiBoxAppend(bottom_box, uiControl(status_bar), true);
-    uiBoxAppend(bottom_box, uiControl(save_button), false);
-
-    vbox = uiNewVerticalBox();
-    uiBoxSetPadded(vbox, true);
-    uiBoxAppend(vbox, uiControl(button_box), false);
-    uiBoxAppend(vbox, uiControl(icon_table), true);
-    uiBoxAppend(vbox, uiControl(progress_bar), false);
-    uiBoxAppend(vbox, uiControl(bottom_box), false);
-
-    uiWindowSetChild(window, uiControl(vbox));
-    uiWindowOnClosing(window, cb<uiWindow *, &Hsgui::on_quit>(), this);
+void Hsgui::update_display() {
+    icon_view->setGridSize(QSize(dmi.width + 32, dmi.height + 32));
+    dmi_model.modify();
 }
 
-void Hsgui::run() {
-    uiControlShow(uiControl(window));
-    uiMain();
+void Hsgui::on_save_progress(int c, std::string *state) {
+    progress_bar->setValue(c);
+    status_label->setText(QString::fromStdString(*state));
 }
 
-int main() {
-    Hsgui gui{};
-    gui.run();
+void Hsgui::on_selection_change(const QItemSelection &selected,
+                                const QItemSelection &deselected) {
+    if (icon_view->selectionModel()->selectedIndexes().size())
+        save_button->setText("Save Selected");
+    else
+        save_button->setText("Save All");
 }
 
-// wow this is ugly, thanks C
-#define HANDLER(f, a, ...)                                                     \
-    [](uiTableModelHandler *h, uiTableModel *, ##__VA_ARGS__) {                \
-        auto t = reinterpret_cast<DMITableHandler *>(h);                       \
-        return t->f a;                                                         \
-    }
 
-DMITableHandler::DMITableHandler(DMI &dmi) : dmi(dmi) {
-    handler = {
-        HANDLER(NumColumns, ()), HANDLER(ColumnType, (x), int x),
-        HANDLER(NumRows, ()), HANDLER(CellValue, (x, y), int x, int y),
-        HANDLER(SetCellValue, (x, y, z), int x, int y, const uiTableValue *z)};
-}
+int main(int argc, char **argv) {
+    QApplication app{argc, argv};
+    Hsgui hsgui;
+    hsgui.show();
 
-#undef HANDLER
-
-int DMITableHandler::NumColumns() { return 1; }
-
-uiTableValueType DMITableHandler::ColumnType(int) {
-    return uiTableValueTypeString;
-}
-
-int DMITableHandler::NumRows() {
-    return dmi.states.size();
-}
-
-uiTableValue *DMITableHandler::CellValue(int row, int column) {
-    std::cout << dmi.states.size() << " " << row << ":" << column << "\n";
-    return uiNewTableValueString(dmi.states[row].name.c_str());
-}
-
-void DMITableHandler::SetCellValue(int row, int column,
-                                   const uiTableValue *val) {
+    return app.exec();
 }

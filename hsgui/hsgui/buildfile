@@ -1,9 +1,4 @@
-import libs += libui%lib{ui} libheadsurgeon%lib{headsurgeon}
-
-if ($cc.target.class == 'linux')
-{
-  import libs += lib{pthread}
-}
+import libs += libheadsurgeon%lib{headsurgeon} Qt5Widgets%lib{Qt5Widgets}
 
 exe{hsgui}: {hxx ixx txx cxx}{**} $libs
 

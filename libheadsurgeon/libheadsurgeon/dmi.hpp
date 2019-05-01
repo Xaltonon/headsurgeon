@@ -28,6 +28,7 @@ public:
         unsigned frames = 1;
         unsigned loop = 0;
         std::vector<float> delays;
+        std::vector<std::vector<Image>> images;
 
         Vec size() const;
 
@@ -37,8 +38,6 @@ public:
 
         void write_frames(unsigned dir, fs::path path);
         void reduplicate();
-
-        std::vector<std::vector<Image>> images;
     };
 
     LIBHEADSURGEON_SYMEXPORT void load(fs::path fname);
