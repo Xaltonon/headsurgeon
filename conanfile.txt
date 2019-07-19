@@ -1,0 +1,15 @@
+[requires]
+libpng/1.6.37@bincrafters/stable
+libwebp/1.0.0@bincrafters/stable
+cli11/1.6.1@bincrafters/stable
+qt/5.13.0@bincrafters/stable
+
+[imports]
+bin, Qt5Core.dll -> ./bin
+bin, Qt5Gui.dll -> ./bin
+bin, Qt5Widgets.dll -> ./bin
+plugins/platforms, *.dll -> ./bin/platforms
+plugins/styles, *.dll -> ./bin/styles
+
+[generators]
+cmake
