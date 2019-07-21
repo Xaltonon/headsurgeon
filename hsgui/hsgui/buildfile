@@ -1,5 +1,0 @@
-import libs += libheadsurgeon%lib{headsurgeon} Qt5Widgets%lib{Qt5Widgets}
-
-exe{hsgui}: {hxx ixx txx cxx}{**} $libs
-
-cxx.poptions =+ "-I$out_root" "-I$src_root"

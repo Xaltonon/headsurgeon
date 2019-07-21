@@ -1,7 +1,0 @@
-project = libheadsurgeon
-
-using version
-using config
-using test
-using install
-using dist
